@@ -7,7 +7,7 @@ my_interproscan/
 /stringtiedb/
 /analysis/proteins.fasta
 /analysis/all_domains.tsv
-*/dist-newstyle/*
+/dist-newstyle
 
 # exlude files
 *.fastq
