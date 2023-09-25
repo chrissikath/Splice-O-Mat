@@ -1,0 +1,928 @@
+id,tissue
+SRR14436589,brain alzheimer
+SRR14436590,brain alzheimer
+SRR14436591,brain alzheimer
+SRR14436592,brain alzheimer
+SRR14436593,brain alzheimer
+SRR14436594,brain alzheimer
+SRR14436595,brain alzheimer
+SRR14436596,brain alzheimer
+SRR14436597,brain alzheimer
+SRR14436598,brain alzheimer
+SRR14436599,brain alzheimer
+SRR14436600,brain alzheimer
+SRR14436601,brain alzheimer
+SRR14436602,brain alzheimer
+SRR14436603,brain alzheimer
+SRR14436604,brain alzheimer
+SRR14436605,brain alzheimer
+SRR14436606,brain alzheimer
+SRR14436607,brain alzheimer
+SRR14436608,brain alzheimer
+SRR14436609,brain alzheimer
+SRR14436610,brain alzheimer
+SRR14436611,brain alzheimer
+SRR14436612,brain alzheimer
+SRR14436613,brain alzheimer
+SRR14436614,brain alzheimer
+SRR14436615,brain alzheimer
+SRR14436616,brain alzheimer
+SRR14436617,brain alzheimer
+SRR14436618,brain alzheimer
+SRR14436619,brain alzheimer
+SRR14436620,brain alzheimer
+SRR14436621,brain alzheimer
+SRR14436622,brain alzheimer
+SRR14436623,brain alzheimer
+SRR14436624,brain alzheimer
+SRR14436625,brain alzheimer
+SRR14436626,brain alzheimer
+SRR14436627,brain alzheimer
+SRR14436628,brain alzheimer
+SRR14550949,liver
+SRR14550950,liver
+SRR14550951,liver
+SRR14550952,liver
+SRR14550953,liver
+SRR14550954,liver
+SRR14550955,liver
+SRR14550956,liver
+SRR14550957,liver
+SRR14550958,liver
+SRR14550959,liver
+SRR14550960,liver
+SRR14550961,liver
+SRR14550962,liver
+SRR14550963,liver
+SRR14550964,liver
+SRR14550965,liver
+SRR14550966,liver
+SRR14550967,liver
+SRR14550968,liver
+SRR14550969,liver
+SRR14550970,liver
+SRR14550971,liver
+SRR14550972,liver
+SRR14550973,liver
+SRR14550974,liver
+SRR14550975,liver
+SRR14550976,liver
+SRR14550977,liver
+SRR14550978,liver
+SRR14550979,liver
+SRR14550980,liver
+SRR14550981,liver
+SRR14550982,liver
+SRR14550983,liver
+SRR14550984,liver
+SRR14550985,liver
+SRR14550986,liver
+SRR14550987,liver
+SRR14550988,liver
+SRR14550989,liver
+SRR14550990,liver
+SRR14550991,liver
+SRR14550992,liver
+SRR14550993,liver
+SRR14550994,liver
+SRR14550995,liver
+SRR14550996,liver
+SRR14550997,liver
+SRR14550998,liver
+SRR14550999,liver
+SRR14551000,liver
+SRR14551001,liver
+SRR14551002,liver
+SRR14551003,liver
+SRR14551004,liver
+SRR14551005,liver
+SRR14551006,liver
+SRR14551007,liver
+SRR14551008,liver
+SRR14551009,liver
+SRR14551010,liver
+SRR14551011,liver
+SRR14551012,liver
+SRR14551013,liver
+SRR14551014,liver
+SRR14551015,liver
+SRR14551016,liver
+SRR14551017,liver
+SRR14551018,liver
+SRR14551019,liver
+SRR14551020,liver
+SRR14551021,liver
+SRR14551022,liver
+SRR14551023,liver
+SRR14551024,liver
+SRR14551025,liver
+SRR14551026,liver
+SRR14551027,liver
+SRR14551028,liver
+SRR14551029,liver
+SRR14551030,liver
+SRR14551031,liver
+SRR14551032,liver
+SRR14551033,liver
+SRR14551034,liver
+SRR14551035,liver
+SRR14551036,liver
+SRR14551037,liver
+SRR14551038,liver
+SRR14551039,liver
+SRR14551040,liver
+SRR14551041,liver
+SRR14551042,liver
+SRR15505965,brain opioid
+SRR15505966,brain opioid
+SRR15505967,brain opioid
+SRR15505968,brain opioid
+SRR15505969,brain opioid
+SRR15505970,brain opioid
+SRR15505971,brain opioid
+SRR15505972,brain opioid
+SRR15505973,brain opioid
+SRR15505974,brain opioid
+SRR15505975,brain opioid
+SRR15505976,brain opioid
+SRR15505977,brain opioid
+SRR15505978,brain opioid
+SRR15505979,brain opioid
+SRR15505980,brain opioid
+SRR15505981,brain opioid
+SRR15505982,brain opioid
+SRR15505983,brain opioid
+SRR15505984,brain opioid
+SRR15505985,brain opioid
+SRR15505986,brain opioid
+SRR15505987,brain opioid
+SRR15505988,brain opioid
+SRR15505989,brain opioid
+SRR15505990,brain opioid
+SRR15505991,brain opioid
+SRR15505992,brain opioid
+SRR15505993,brain opioid
+SRR15505994,brain opioid
+SRR15505995,brain opioid
+SRR15505996,brain opioid
+SRR15505997,brain opioid
+SRR15505998,brain opioid
+SRR15505999,brain opioid
+SRR15506000,brain opioid
+SRR15506001,brain opioid
+SRR15506002,brain opioid
+SRR15506003,brain opioid
+SRR15506004,brain opioid
+SRR15506005,brain opioid
+SRR22214343,kidney
+SRR22214344,kidney
+SRR22214345,kidney
+SRR22214346,kidney
+SRR22214347,kidney
+SRR22214348,kidney
+SRR22214349,kidney
+SRR22214350,kidney
+SRR22214351,kidney
+SRR22214352,kidney
+SRR22214353,kidney
+SRR22214354,kidney
+SRR22214355,kidney
+SRR22214356,kidney
+SRR22214357,kidney
+SRR22214358,kidney
+SRR22214359,kidney
+SRR22214360,kidney
+SRR22214361,kidney
+SRR22214362,kidney
+SRR22214363,kidney
+SRR22214364,kidney
+SRR22214365,kidney
+SRR22214366,kidney
+SRR22214367,kidney
+SRR22214368,kidney
+SRR22214369,kidney
+SRR22214370,kidney
+SRR22214371,kidney
+SRR22214372,kidney
+SRR22214373,kidney
+SRR22214374,kidney
+SRR22214375,kidney
+SRR22214376,kidney
+SRR22214377,kidney
+SRR22214378,kidney
+SRR22214379,kidney
+SRR22214380,kidney
+SRR22214381,kidney
+SRR22214382,kidney
+SRR22214383,kidney
+SRR22214384,kidney
+SRR22214385,kidney
+SRR22214386,kidney
+SRR5831944,brain
+SRR5831945,brain
+SRR5831946,brain
+SRR5831947,brain
+SRR5831948,brain
+SRR5831949,brain
+SRR5831950,brain
+SRR5831951,brain
+SRR5831952,brain
+SRR5831953,brain
+SRR5831954,brain
+SRR5831955,brain
+SRR5831956,brain
+SRR5831957,brain
+SRR5831958,brain
+SRR5831959,brain
+SRR5831960,brain
+SRR5831961,brain
+SRR5831962,brain
+SRR5831963,brain
+SRR5831964,brain
+SRR5831965,brain
+SRR5831966,brain
+SRR5831967,brain
+SRR5831968,brain
+SRR5831969,brain
+SRR5831970,brain
+SRR5831971,brain
+SRR5831972,brain
+SRR5831973,brain
+SRR5831974,brain
+SRR5831975,brain
+SRR5831976,brain
+SRR5831977,brain
+SRR5831978,brain
+SRR5831979,brain
+SRR5831980,brain
+SRR5831981,brain
+SRR5831982,brain
+SRR5831983,brain
+SRR5831984,brain
+SRR5831985,brain
+SRR5831986,brain
+SRR5831987,brain
+SRR5831988,brain
+SRR5831989,brain
+SRR5831990,brain
+SRR5831991,brain
+SRR5831992,brain
+SRR5831993,brain
+SRR5831994,brain
+SRR5831995,brain
+SRR5831996,brain
+SRR5831997,brain
+SRR5831998,brain
+SRR5831999,brain
+SRR5832000,brain
+SRR5832001,brain
+SRR5832002,brain
+SRR13506109,heart
+SRR13506131,heart
+SRR13506049,heart
+SRR13506050,heart
+SRR13506051,heart
+SRR13506052,heart
+SRR13506053,heart
+SRR13506054,heart
+SRR13506055,heart
+SRR13506056,heart
+SRR13506057,heart
+SRR13506058,heart
+SRR13506059,heart
+SRR13506060,heart
+SRR13506061,heart
+SRR13506062,heart
+SRR13506063,heart
+SRR13506064,heart
+SRR13506065,heart
+SRR13506066,heart
+SRR13506067,heart
+SRR13506068,heart
+SRR13506069,heart
+SRR13506070,heart
+SRR13506071,heart
+SRR13506072,heart
+SRR13506073,heart
+SRR13506074,heart
+SRR13506075,heart
+SRR13506076,heart
+SRR13506077,heart
+SRR13506078,heart
+SRR13506079,heart
+SRR13506080,heart
+SRR13506081,heart
+SRR13506082,heart
+SRR13506083,heart
+SRR13506084,heart
+SRR13506085,heart
+SRR13506086,heart
+SRR13506087,heart
+SRR13506088,heart
+SRR13506089,heart
+SRR13506090,heart
+SRR13506091,heart
+SRR13506092,heart
+SRR13506093,heart
+SRR13506094,heart
+SRR13506095,heart
+SRR13506096,heart
+SRR13506097,heart
+SRR13506098,heart
+SRR13506099,heart
+SRR13506100,heart
+SRR13506101,heart
+SRR13506102,heart
+SRR13506103,heart
+SRR13506104,heart
+SRR13506105,heart
+SRR13506106,heart
+SRR13506107,heart
+SRR13506108,heart
+SRR13506110,heart
+SRR13506111,heart
+SRR13506112,heart
+SRR13506113,heart
+SRR13506114,heart
+SRR13506115,heart
+SRR13506116,heart
+SRR13506117,heart
+SRR13506118,heart
+SRR13506119,heart
+SRR13506120,heart
+SRR13506121,heart
+SRR13506122,heart
+SRR13506123,heart
+SRR13506124,heart
+SRR13506125,heart
+SRR13506126,heart
+SRR13506127,heart
+SRR13506128,heart
+SRR13506129,heart
+SRR13506130,heart
+SRR13506132,heart
+SRR13506133,heart
+SRR13506134,heart
+SRR13506135,heart
+SRR13506136,heart
+SRR13506137,heart
+SRR13506138,heart
+SRR13506139,heart
+SRR13506140,heart
+SRR13506141,heart
+SRR13506142,heart
+SRR13506143,heart
+SRR13506144,heart
+SRR13506145,heart
+SRR13506146,heart
+SRR13506147,heart
+SRR13506148,heart
+SRR13506149,heart
+ipiPD1_1_EDT,melanoma
+ipiPD1_1_PRE,melanoma
+ipiPD1_10_PRE,melanoma
+ipiPD1_12_PRE,melanoma
+ipiPD1_13_EDT,melanoma
+ipiPD1_13_PRE,melanoma
+ipiPD1_14_PRE,melanoma
+ipiPD1_15_PRE,melanoma
+ipiPD1_17_PRE,melanoma
+ipiPD1_19_EDT,melanoma
+ipiPD1_19_PRE,melanoma
+ipiPD1_2_PRE,melanoma
+ipiPD1_20_PRE,melanoma
+ipiPD1_21_PRE,melanoma
+ipiPD1_23_PRE,melanoma
+ipiPD1_24_PRE,melanoma
+ipiPD1_25_PRE,melanoma
+ipiPD1_26_PRE,melanoma
+ipiPD1_27_EDT,melanoma
+ipiPD1_27_PRE,melanoma
+ipiPD1_32_PRE,melanoma
+ipiPD1_33_EDT,melanoma
+ipiPD1_33_PRE,melanoma
+ipiPD1_34_PRE,melanoma
+ipiPD1_35_EDT,melanoma
+ipiPD1_35_PRE,melanoma
+ipiPD1_36_EDT,melanoma
+ipiPD1_36_PRE,melanoma
+ipiPD1_37_PRE,melanoma
+ipiPD1_38_PRE,melanoma
+ipiPD1_44_PRE,melanoma
+ipiPD1_45_PRE,melanoma
+ipiPD1_46_PRE,melanoma
+ipiPD1_47_PRE,melanoma
+ipiPD1_49_PRE,melanoma
+ipiPD1_50_PRE,melanoma
+ipiPD1_6_PRE,melanoma
+ipiPD1_8_PRE,melanoma
+ipiPD1_9_EDT,melanoma
+PD1_10_EDT,melanoma
+PD1_10_PRE,melanoma
+PD1_11_PRE,melanoma
+PD1_12_PRE,melanoma
+PD1_13_EDT,melanoma
+PD1_13_PRE,melanoma
+PD1_14_PRE,melanoma
+PD1_15_PRE,melanoma
+PD1_16_PRE,melanoma
+PD1_17_EDT,melanoma
+PD1_17_PRE,melanoma
+PD1_18_PRE,melanoma
+PD1_19_PRE,melanoma
+PD1_2_PRE,melanoma
+PD1_21_PRE,melanoma
+PD1_23_PRE,melanoma
+PD1_25_EDT,melanoma
+PD1_25_PRE,melanoma
+PD1_27_PRE,melanoma
+PD1_29_EDT,melanoma
+PD1_29_PRE,melanoma
+PD1_3_PRE,melanoma
+PD1_34_PRE,melanoma
+PD1_35_PRE,melanoma
+PD1_36_PRE,melanoma
+PD1_38_PRE,melanoma
+PD1_40_PRE,melanoma
+PD1_41_EDT,melanoma
+PD1_41_PRE,melanoma
+PD1_42_PRE,melanoma
+PD1_44_PRE,melanoma
+PD1_45_PRE,melanoma
+PD1_46_PRE,melanoma
+PD1_47_EDT,melanoma
+PD1_47_PRE,melanoma
+PD1_48_EDT,melanoma
+PD1_48_PRE,melanoma
+PD1_49_PRE,melanoma
+PD1_5_PRE,melanoma
+PD1_50_PRE,melanoma
+PD1_52_PRE,melanoma
+PD1_53_PRE,melanoma
+PD1_54_PRE,melanoma
+PD1_6_PRE,melanoma
+PD1_7_PRE,melanoma
+PD1_8_EDT,melanoma
+PD1_9_PRE,melanoma
+ipiPD1_4_EDT,melanoma
+ipiPD1_7_PRE,melanoma
+PD1_30_PRE,melanoma
+PD1_4_PRE,melanoma
+PD1_8_PRE,melanoma
+SRR10263552,ileum colon
+SRR10263553,ileum colon
+SRR10263554,ileum colon
+SRR10263615,ileum colon
+SRR10263616,ileum colon
+SRR10263617,ileum colon
+SRR10263618,ileum colon
+SRR10263619,ileum colon
+SRR10263620,ileum colon
+SRR10263621,ileum colon
+SRR10263622,ileum colon
+SRR10263623,ileum colon
+SRR10263624,ileum colon
+SRR10263625,ileum colon
+SRR10263626,ileum colon
+SRR10263627,ileum colon
+SRR10263636,jejunum colon
+SRR10263637,jejunum colon
+SRR10263638,jejunum colon
+SRR10263639,jejunum colon
+SRR10263640,jejunum colon
+SRR10263641,jejunum colon
+SRR10263642,jejunum colon
+SRR10263643,jejunum colon
+SRR10263644,jejunum colon
+SRR10263645,jejunum colon
+SRR10263646,jejunum colon
+SRR10263647,jejunum colon
+SRR10263648,jejunum colon
+SRR10263649,jejunum colon
+SRR10263650,jejunum colon
+SRR10263651,jejunum colon
+SRR10263660,duodenum
+SRR10263661,duodenum
+SRR10263662,duodenum
+SRR10263663,duodenum
+SRR10263664,duodenum
+SRR10263665,duodenum
+SRR10263666,duodenum
+SRR10263667,duodenum
+SRR10263737,proximal colon
+SRR10263738,proximal colon
+SRR10263739,proximal colon
+SRR10263740,proximal colon
+SRR10263741,proximal colon
+SRR10263742,proximal colon
+SRR10263743,proximal colon
+SRR10263744,proximal colon
+SRR10263753,distal colon
+SRR10263754,distal colon
+SRR10263755,distal colon
+SRR10263756,distal colon
+SRR10263757,distal colon
+SRR10263758,distal colon
+SRR10263759,distal colon
+SRR10263760,distal colon
+SRR10263769,esophagus
+SRR10263770,esophagus
+SRR10263771,esophagus
+SRR10263772,esophagus
+SRR10263773,esophagus
+SRR10263774,esophagus
+SRR10263775,esophagus
+SRR10263776,esophagus
+SRR10263785,trachea
+SRR10263786,trachea
+SRR10263787,trachea
+SRR10263788,trachea
+SRR10263789,trachea
+SRR10263790,trachea
+SRR10263791,trachea
+SRR10263792,trachea
+SRR10263860,vena cava
+SRR10263861,vena cava
+SRR10263862,vena cava
+SRR10263863,vena cava
+SRR10263864,vena cava
+SRR10263865,vena cava
+SRR10263866,vena cava
+SRR10263867,vena cava
+SRR10263880,pericardium
+SRR10263881,pericardium
+SRR10263882,pericardium
+SRR10263883,pericardium
+SRR10263884,pericardium
+SRR10263885,pericardium
+SRR10263886,pericardium
+SRR10263887,pericardium
+SRR10263900,left atruim
+SRR10263901,left atruim
+SRR10263902,left atruim
+SRR10263903,left atruim
+SRR10263904,left atruim
+SRR10263905,left atruim
+SRR10263906,left atruim
+SRR10263907,left atruim
+SRR10263981,left ventricle heart
+SRR10263982,left ventricle heart
+SRR10263983,left ventricle heart
+SRR10263984,left ventricle heart
+SRR10263985,left ventricle heart
+SRR10263986,left ventricle heart
+SRR10263987,left ventricle heart
+SRR10263988,left ventricle heart
+SRR10263997,right atrium heart
+SRR10263998,right atrium heart
+SRR10263999,right atrium heart
+SRR10264000,right atrium heart
+SRR10264001,right atrium heart
+SRR10264002,right atrium heart
+SRR10264003,right atrium heart
+SRR10264004,right atrium heart
+SRR10264005,right atrium heart
+SRR10264006,right atrium heart
+SRR10264007,right atrium heart
+SRR10264008,right atrium heart
+SRR10264009,right atrium heart
+SRR10264010,right atrium heart
+SRR10264011,right atrium heart
+SRR10264012,right atrium heart
+SRR10264021,right ventricle heart
+SRR10264022,right ventricle heart
+SRR10264023,right ventricle heart
+SRR10264024,right ventricle heart
+SRR10264025,right ventricle heart
+SRR10264026,right ventricle heart
+SRR10264027,right ventricle heart
+SRR10264028,right ventricle heart
+SRR10264029,right ventricle heart
+SRR10264030,right ventricle heart
+SRR10264031,right ventricle heart
+SRR10264032,right ventricle heart
+SRR10264033,right ventricle heart
+SRR10264034,right ventricle heart
+SRR10264035,right ventricle heart
+SRR10264036,right ventricle heart
+SRR10264109,fallopian tube
+SRR10264110,fallopian tube
+SRR10264111,fallopian tube
+SRR10264112,fallopian tube
+SRR10264113,fallopian tube
+SRR10264114,fallopian tube
+SRR10264115,fallopian tube
+SRR10264116,fallopian tube
+SRR10264117,fallopian tube
+SRR10264118,fallopian tube
+SRR10264119,fallopian tube
+SRR10264120,fallopian tube
+SRR10264121,fallopian tube
+SRR10264122,fallopian tube
+SRR10264123,fallopian tube
+SRR10264124,fallopian tube
+SRR10264133,thyroid
+SRR10264134,thyroid
+SRR10264135,thyroid
+SRR10264136,thyroid
+SRR10264137,thyroid
+SRR10264138,thyroid
+SRR10264139,thyroid
+SRR10264140,thyroid
+SRR10264149,uterus
+SRR10264150,uterus
+SRR10264151,uterus
+SRR10264152,uterus
+SRR10264153,uterus
+SRR10264154,uterus
+SRR10264155,uterus
+SRR10264156,uterus
+SRR10264225,lymph node
+SRR10264226,lymph node
+SRR10264227,lymph node
+SRR10264228,lymph node
+SRR10264229,lymph node
+SRR10264230,lymph node
+SRR10264231,lymph node
+SRR10264232,lymph node
+SRR10264241,placenta
+SRR10264242,placenta
+SRR10264243,placenta
+SRR10264244,placenta
+SRR10264245,placenta
+SRR10264246,placenta
+SRR10264247,placenta
+SRR10264248,placenta
+SRR10264257,breast
+SRR10264258,breast
+SRR10264259,breast
+SRR10264260,breast
+SRR10264261,breast
+SRR10264262,breast
+SRR10264263,breast
+SRR10264264,breast
+SRR10264273,pancreas
+SRR10264274,pancreas
+SRR10264275,pancreas
+SRR10264276,pancreas
+SRR10264277,pancreas
+SRR10264278,pancreas
+SRR10264279,pancreas
+SRR10264280,pancreas
+SRR10264353,adipose
+SRR10264354,adipose
+SRR10264355,adipose
+SRR10264356,adipose
+SRR10264357,adipose
+SRR10264358,adipose
+SRR10264359,adipose
+SRR10264360,adipose
+SRR10264373,liver
+SRR10264374,liver
+SRR10264375,liver
+SRR10264376,liver
+SRR10264377,liver
+SRR10264378,liver
+SRR10264379,liver
+SRR10264380,liver
+SRR10264393,brain
+SRR10264394,brain
+SRR10264395,brain
+SRR10264396,brain
+SRR10264397,brain
+SRR10264398,brain
+SRR10264399,brain
+SRR10264400,brain
+SRR10264469,thymus
+SRR10264470,thymus
+SRR10264471,thymus
+SRR10264472,thymus
+SRR10264473,thymus
+SRR10264474,thymus
+SRR10264475,thymus
+SRR10264476,thymus
+SRR10264477,thymus
+SRR10264478,thymus
+SRR10264479,thymus
+SRR10264480,thymus
+SRR10264481,thymus
+SRR10264482,thymus
+SRR10264483,thymus
+SRR10264484,thymus
+SRR10264493,heart
+SRR10264494,heart
+SRR10264495,heart
+SRR10264496,heart
+SRR10264497,heart
+SRR10264498,heart
+SRR10264499,heart
+SRR10264500,heart
+SRR10264501,heart
+SRR10264502,heart
+SRR10264503,heart
+SRR10264504,heart
+SRR10264505,heart
+SRR10264506,heart
+SRR10264507,heart
+SRR10264508,heart
+SRR10264517,lung
+SRR10264518,lung
+SRR10264519,lung
+SRR10264520,lung
+SRR10264521,lung
+SRR10264522,lung
+SRR10264523,lung
+SRR10264524,lung
+SRR10264525,lung
+SRR10264585,lung
+SRR10264586,lung
+SRR10264587,lung
+SRR10264588,lung
+SRR10264589,lung
+SRR10264590,lung
+SRR10264591,lung
+SRR10264600,spleen
+SRR10264601,spleen
+SRR10264602,spleen
+SRR10264603,spleen
+SRR10264604,spleen
+SRR10264605,spleen
+SRR10264606,spleen
+SRR10264607,spleen
+SRR10264616,testicle
+SRR10264617,testicle
+SRR10264618,testicle
+SRR10264619,testicle
+SRR10264620,testicle
+SRR10264621,testicle
+SRR10264622,testicle
+SRR10264623,testicle
+SRR10264632,ovary
+SRR10264633,ovary
+SRR10264634,ovary
+SRR10264635,ovary
+SRR10264636,ovary
+SRR10264637,ovary
+SRR10264638,ovary
+SRR10264639,ovary
+SRR10264707,kidney
+SRR10264708,kidney
+SRR10264709,kidney
+SRR10264710,kidney
+SRR10264711,kidney
+SRR10264712,kidney
+SRR10264713,kidney
+SRR10264714,kidney
+SRR10264723,skeletal muscle
+SRR10264724,skeletal muscle
+SRR10264725,skeletal muscle
+SRR10264726,skeletal muscle
+SRR10264727,skeletal muscle
+SRR10264728,skeletal muscle
+SRR10264729,skeletal muscle
+SRR10264730,skeletal muscle
+SRR10264739,small intestine
+SRR10264740,small intestine
+SRR10264741,small intestine
+SRR10264742,small intestine
+SRR10264743,small intestine
+SRR10264744,small intestine
+SRR10264745,small intestine
+SRR10264746,small intestine
+SRR10264759,colon
+SRR10264760,colon
+SRR10264761,colon
+SRR10264762,colon
+SRR10264763,colon
+SRR10264764,colon
+SRR10264765,colon
+SRR10264766,colon
+SRR10264841,prostate
+SRR10264842,prostate
+SRR10264843,prostate
+SRR10264844,prostate
+SRR10264845,prostate
+SRR10264846,prostate
+SRR10264847,prostate
+SRR10264848,prostate
+SRR10264861,bladder
+SRR10264862,bladder
+SRR10264863,bladder
+SRR10264864,bladder
+SRR10264865,bladder
+SRR10264866,bladder
+SRR10264867,bladder
+SRR10264868,bladder
+SRR10264877,cervix
+SRR10264878,cervix
+SRR10264879,cervix
+SRR10264880,cervix
+SRR10264881,cervix
+SRR10264882,cervix
+SRR10264883,cervix
+SRR10264884,cervix
+SRR10264885,cervix
+SRR10264886,cervix
+SRR10264887,cervix
+SRR10264888,cervix
+SRR10264889,cervix
+SRR10264949,cervix
+SRR10264950,cervix
+SRR10264951,cervix
+SRR10264960,adrenal
+SRR10264961,adrenal
+SRR10264962,adrenal
+SRR10264963,adrenal
+SRR10264964,adrenal
+SRR10264965,adrenal
+SRR10264966,adrenal
+SRR10264967,adrenal
+SRR10264968,adrenal
+SRR10264969,adrenal
+SRR10264970,adrenal
+SRR10264971,adrenal
+SRR10264972,adrenal
+SRR10264973,adrenal
+SRR10264974,adrenal
+SRR10264975,adrenal
+SRR10264984,stomach
+SRR10264985,stomach
+SRR10264986,stomach
+SRR10264987,stomach
+SRR10264988,stomach
+SRR10264989,stomach
+SRR10264990,stomach
+SRR10264991,stomach
+SRR10264992,stomach
+SRR10264993,stomach
+SRR10264994,stomach
+SRR10264995,stomach
+SRR10264996,stomach
+SRR10264997,stomach
+SRR10264998,stomach
+SRR10264999,stomach
+SRR10265069,brain cerebellum
+SRR10265070,brain cerebellum
+SRR10265071,brain cerebellum
+SRR10265072,brain cerebellum
+SRR10265073,brain cerebellum
+SRR10265074,brain cerebellum
+SRR10265075,brain cerebellum
+SRR10265076,brain cerebellum
+SRR10265085,brain stem
+SRR10265086,brain stem
+SRR10265087,brain stem
+SRR10265088,brain stem
+SRR10265089,brain stem
+SRR10265090,brain stem
+SRR10265091,brain stem
+SRR10265092,brain stem
+SRR10265101,brain frontal cortex
+SRR10265102,brain frontal cortex
+SRR10265103,brain frontal cortex
+SRR10265104,brain frontal cortex
+SRR10265105,brain frontal cortex
+SRR10265106,brain frontal cortex
+SRR10265107,brain frontal cortex
+SRR10265108,brain frontal cortex
+SRR10265117,brain striatum
+SRR10265118,brain striatum
+SRR10265119,brain striatum
+SRR10265120,brain striatum
+SRR10265121,brain striatum
+SRR10265122,brain striatum
+SRR10265123,brain striatum
+SRR10265124,brain striatum
+SRR10265125,brain striatum
+SRR10265126,brain striatum
+SRR10265127,brain striatum
+SRR10265197,brain occipital cortex
+SRR10265198,brain occipital cortex
+SRR10265199,brain occipital cortex
+SRR10265200,brain occipital cortex
+SRR10265201,brain occipital cortex
+SRR10265202,brain occipital cortex
+SRR10265203,brain occipital cortex
+SRR10265204,brain occipital cortex
+SRR10265205,brain occipital cortex
+SRR10265206,brain occipital cortex
+SRR10265207,brain occipital cortex
+SRR10265216,brain parietal cortex
+SRR10265217,brain parietal cortex
+SRR10265218,brain parietal cortex
+SRR10265219,brain parietal cortex
+SRR10265220,brain parietal cortex
+SRR10265221,brain parietal cortex
+SRR10265222,brain parietal cortex
+SRR10265223,brain parietal cortex
+SRR10265224,brain parietal cortex
+SRR10265225,brain parietal cortex
+SRR10265226,brain parietal cortex
+SRR10265235,brain fetal
+SRR10265236,brain fetal
+SRR10265237,brain fetal
+SRR10265238,brain fetal
+SRR10265239,brain fetal
+SRR10265240,brain fetal
+SRR10265241,brain fetal
+SRR10265242,brain fetal
