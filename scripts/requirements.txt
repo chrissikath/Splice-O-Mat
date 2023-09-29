@@ -10,3 +10,4 @@ dash_bootstrap_components==1.2.1
 Flask==2.2.2
 pybedtools==0.9.0
 Bio==1.80
+regex==2.5.116
