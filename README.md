@@ -130,8 +130,7 @@ All files are within directory `analysis/`
    - The resulting `stringtie_2.db` is the new database.
 
 Other necessary files:
-- hg38.fna
-- hg38.fna.fai
+- ../analysis/hg38.fna
 
 ## Results 
 Inside the `analysis/` directory, you will find the following directories for each dataset:
