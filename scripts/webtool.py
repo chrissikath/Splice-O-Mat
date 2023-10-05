@@ -26,7 +26,8 @@ import math
 from scipy import stats
 import json
 import logging
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='example.log', level=logging.DEBUG)
+# logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
 import warnings
 # WARNING: i used the append function which will be deprecated in the future
 warnings.simplefilter(action='ignore', category=FutureWarning) 
@@ -124,7 +125,7 @@ def create_connection():
     # TODO - change path and name of database in the future 
     con = None
     try:
-        con = sqlite3.connect("../analysis/stringtie_2.db")
+        con = sqlite3.connect("/var/cache/stringtie.db")
     except OSError as e:
         print(e)
     return con
@@ -242,136 +243,19 @@ def get_max_flow(dict_input):
     key_of_longest=max(dict_input, key=lambda k: len(dict_input[k]))
     return dict_input[key_of_longest],key_of_longest
 
-#ind domains in protein sequence via InterProScan
-# and return only domains of longest transcript format (longest_transcript, domain, start_on_cDNA, end_on_cDNA)
-# :param protein_file: protein file
-# :return: domains, start_on_cDNA, stop_on_cDNA
-
-def find_domains(protein_file, strandness):
-    """Find domains in a protein sequence via InterProScan 
-    and return from the longest protein the domains and the start and end on the DNA on plus strand
-    #! if the gene lays on the minus strand, reverese complement is used, however, 
-    #! the return values start and end on the DNA is still on the plus strand for plotting on the svg
-    # wirkt einfach, war es aber nicht
-    Args:
-        protein_file (string): path to protein file
-        strandness (string): "+" or "-" for strandness
-
-    Returns:
-        domains (list): list of domains (transcript_id, domain, start_on_cDNA, end_on_cDNA)
-    """
-    print("--Find domains--")
-    #only run InterProScan for longest transcript
-    #go through proteins.fast and take every second line and save longest protein
-    # TODO - delete tmp file
-    with open(protein_file, 'r') as f:
-        proteins = f.read()
-    #save protein as dict with transcript id as key and protein sequence as value
-    proteins_dict = split_fasta_string_to_dict(proteins)
-    #get key of dict where value is longest
-    _, longest_transcript = get_max_flow(proteins_dict)
-    print(longest_transcript)
-
-    #write longest transcript to file
-    # TODO - delete tmp file
-    with open(path_for_tmp+"longest_protein.fasta", 'w') as f:
-        f.write(">"+longest_transcript+"\n")
-        f.write(proteins_dict[longest_transcript])
-    f.close()
-
-    # Run InterProScan on the protein file
-    with open(path_for_tmp+'interproscan_stdout.txt', 'w') as fd:
-        subprocess.run(["../my_interproscan/interproscan-5.60-92.0/interproscan.sh", "-i", path_for_tmp+"proteins.fasta", \
-                        "-f", "tsv", "-appl", "Pfam", "--cpu","8","-o",path_for_tmp+"domains_longest_transcript.tsv"], \
-                            stdout=fd, stderr=fd, check=True)
-
-    # read tsv file and save as pandas dataframe
-    domains = []
-    try:
-        df = pd.read_csv(path_for_tmp+"domains_longest_transcript.tsv", sep="\t", header=None)
-    except:
-        print("No domains found")
-        domains==["","",0,0]
-        return "", domains
-    #sort pandas dataframe by third row, which is length of protein to get longest protein
-    df = df.sort_values(by=[2], ascending=False)
-    df.drop([1,3,4,8,9,10,11], axis=1, inplace=True)
-
-    #get first row of df which are domains of longest protein
-    longest_transcript_name = df.iloc[0,0]
-    #get all rows with longest transcript
-    df = df.loc[df[0] == longest_transcript_name]
-
-    #foe each domain in df
-    for _, row in df.iterrows():
-        # Eine Domaene z..b die gefunden wurde: Leucin rich repeat (length 168) 
-        domain = row[5]
-        # Ich habe nun die Start (88) und Endposition (144) von der Domäne in der Proteinsequenz. 
-        # Um auf Start und end im ORFs zu kommen muss ich nur *3 machen, wegen Triplets. Also: 264, 432. 
-        start_domain_on_ORF = row[6]*3 # since triplets
-        end_domain_on_ORF = row[7]*3 # since triplets
-
-        # Zu erst hole ich mir die cDNA (length:7378) davon, die ich anhand der Koordinaten der Exons bekomme. 
-        #get cDNA from file "cDNA.fasta" by searching for transcript name in file
-        # TODO - delete tmp file
-        cDNA = ""
-        with open(path_for_tmp+"cDNA.fasta") as f:
-            for line in f:
-                if line.startswith(">"+longest_transcript_name+"\n"):
-                    cDNA = next(f).strip()
-        f.close()
-
-        # Von dieser cDNA, suche ich dann das längste ORF (length 4086).
-        #same but different way to get longest ORF
-        start_ORF_on_plus, _, ORF, _ = find_longest_ORF(cDNA, strandness, longest_transcript_name)
-
-        # Zwischenstand:
-        # ich habe das ORF, die cDNA und die Postitionen der Domäne im ORF.
-        # Ich will aber die positionen in der cDNA damit ich es später wieder auf das Genom mappen kann.
-        # Also muss ich herausfinden wo genau das ORF in der cDNA liegt.
-        if strandness == "+": # bei plus strand muss ich nichts machen, da die Positionen schon stimmen
-            position_of_ORF_in_cDNA = cDNA.find(ORF)
-            #jetzt muss ich ja eigentlich diese Position nehmen + der Start der Domäne in dem ORF;
-            #und das gleiche für das ende der Domäen
-            start_domain_on_cDNA = position_of_ORF_in_cDNA + start_domain_on_ORF
-            end_domain_on_cDNA = position_of_ORF_in_cDNA + end_domain_on_ORF
-        else: # bei minus strand muss ich die Positionen umkehren
-            position_of_ORF_in_cDNA = start_ORF_on_plus
-            # Jetzt muss ich diese Domänen die ja im ORF (length 3966) liegen wieder auf die DNA in plus strang richtung "mappen".
-            # Hier muss die Position die ja vom ORF auf dem minus strang kamen erstmal auf das ORF in plus strang richtung "mappen".
-            # Heißt: domäne_start_on_plus_ORF = len(ORF)-end_domäne(423)
-            #  domäne_end_on_plus_ORF = len(ORF)-start_domäne(255)
-            end_domain_on_plus_ORF = len(ORF)-start_domain_on_ORF
-            start_domain_on_plus_ORF = len(ORF)-end_domain_on_ORF
-            start_domain_on_cDNA = position_of_ORF_in_cDNA + start_domain_on_plus_ORF
-            end_domain_on_cDNA = position_of_ORF_in_cDNA + end_domain_on_plus_ORF
-
-        domains.append((longest_transcript_name, domain, start_domain_on_cDNA, end_domain_on_cDNA))
-    return domains
-
-def find_domains_from_database(protein_file):
+def find_domains_from_database(longest_transcript):
     """Find domains in a protein sequence from a database
-    and return from the longest protein the domains and the start and end on the DNA on plus strand
+    and return the domains and their start and end on the DNA on plus strand
     #! if the gene lays on the minus strand, reverese complement is used, however, 
     #! the return values start and end on the DNA is still on the plus strand for plotting on the svg
     # wirkt einfach, war es aber nicht
     Args:
-        protein_file (string): path to protein file
-        strandness (string): "+" or "-" for strandness
+        longest_transcript(string): a protein, using the standard single-letter code
 
     Returns:
         domains (list): list of domains (transcript_id, domain, start_on_cDNA, end_on_cDNA)
     """
     print("--Find domains from database--")
-    #go through proteins.fast and take every second line and save longest protein
-    with open(protein_file, 'r') as f:
-        proteins = f.read()
-    #save protein as dict with transcript id as key and protein sequence as value
-    proteins_dict = split_fasta_string_to_dict(proteins)
-    #get key of dict where value is longest
-
-    _, longest_transcript = get_max_flow(proteins_dict)
-    domains = []
     
     #get domains from database
     statement = "SELECT d.domain, d.start, d.end FROM domains as d, transcripts as t WHERE t.id=d.transcript AND t.transcript_id=?"
@@ -387,6 +271,7 @@ def find_domains_from_database(protein_file):
         con.close()
     
     #for each entry in df append longest_transcript, domain, start, end to domains
+    domains = []
     for _, row in df.iterrows():
         domains.append((longest_transcript, row["domain"], row["start"], row["end"]))
     return domains
@@ -532,6 +417,7 @@ def generate_svg(transcripts, position_mut=None):
 
     y_start = y_start+20
     
+    proteins = {}
     #draw each exon in svg
     y = y_start # y-axis of each exon in svg
     for transcript in transcripts: #for each transcript draw exon, intron, ORF
@@ -555,7 +441,8 @@ def generate_svg(transcripts, position_mut=None):
 
         #calculate ORF of each transcript
         cDNA_string = cDNA_dict.get(transcript) #get cDNA of transcript
-        start_pos, end_pos, ORF_seq, _ = find_longest_ORF(cDNA_string, strand, transcript) #find start stop in cDNA of longest ORF
+        start_pos, end_pos, ORF_seq, protein = find_longest_ORF(cDNA_string, strand, transcript) #find start stop in cDNA of longest ORF
+        proteins[transcript] = protein
 
         if ORF_seq != "No ORF found" or None: #if ORF is found
             # print("ORF found for transcript: "+transcript, start_pos, end_pos)
@@ -582,11 +469,11 @@ def generate_svg(transcripts, position_mut=None):
         transcript_id = svgwrite.text.Text(str(transcript), insert=(size+50,y+5), style="font-size:24")
         d.add(transcript_id)
         
+
     #draw domains of longest protein in svg
     #find domains of each protein and return list of domains for longest protein
-    # domains = find_domains(path_for_tmp+"proteins.fasta", strand)
-    # print(domains)
-    domains = find_domains_from_database(path_for_tmp+"proteins.fasta")
+    _, longest_transcript = get_max_flow(proteins)
+    domains = find_domains_from_database(longest_transcript)
 
     #for each domain in list of domains, calculate position in svg
     y_position = y+10
@@ -710,22 +597,10 @@ def find_longest_ORF(cDNA, strandness, transcript):
         start_pos = longest[1]
         end_pos = longest[2]
 
-    #only the longest to file
-    # TODO - delete tmp files
-    with open(path_for_tmp+"longest_ORF.fasta","a") as f:
-        if len(ORFs)>=1:
-            f.write(">"+transcript+"\n"+str(ORFs[0][0])+"\n")
-    f.close()
-    #write proteins to file
-    #remove protein.fasta file if it exists
-    # TODO - delete tmp files
-    with open(path_for_tmp+"proteins.fasta","a") as f: 
-        if len(ORFs)>=1:
-            cDNA_Seq = Seq(ORFs[0][0])
-            protein = cDNA_Seq.translate(to_stop=True, cds=True)
-            f.write(">"+transcript+"\n"+str(protein)+"\n")
-    f.close()
-    return (start_pos, end_pos, ORFs[0][0], str(protein))
+    cDNA_Seq = Seq(longest[0])
+    protein = cDNA_Seq.translate(to_stop=True, cds=True)
+    return (start_pos, end_pos, longest[0], str(protein))
+
 
 def get_cDNA(transcripts):
     """Get cDNA sequence for each transcript in list of transcripts
@@ -763,9 +638,6 @@ def get_cDNA(transcripts):
                     cDNA_transcript += line.strip()
         f.close()
         cDNA_file += cDNA_transcript+"\n"
-
-    with open(path_for_tmp+"cDNA.fasta","a") as f:
-        f.write(cDNA_file)
 
     #remove bed file
     os.remove(path_for_tmp+"gene.bed")
@@ -934,9 +806,6 @@ def get_cDNA_for_download(transcripts):
         f.close()
         cDNA_file += cDNA_transcript+"\n"
 
-    with open(path_for_tmp+"cDNA.fasta","a") as f:
-        f.write(cDNA_file)
-
     #remove bed file
     os.remove(path_for_tmp+"gene.bed")
     return cDNA_file
@@ -1017,13 +886,12 @@ def get_TPM_from_tissues(gene_id, tissues):
     # now get the length, number of exons, start and stop of each transcript
     con = create_connection()
     cur = con.cursor()
-    transcripts = df_result["transcript_id"].to_list()
     
     length_transcript = []
     start = []
     end = []
     number_exons = [] 
-    for transcript in transcripts: #for each transcript get length, number of exons, start, stop
+    for transcript in  df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
         cur = con.cursor()
@@ -1377,7 +1245,7 @@ def calculate_inner_exons(gene_id):
 ################ 2.0 DASH APP #########################
 # TODO - use dbc.Col and dbc.Row to make the app responsive
 #APP Instance
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP,'assets/styles.css'], url_base_pathname='/Splice-O-Mat/')
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP,'assets/styles.css'], url_base_pathname='/Splice-O-Mat-Exp/')
 
 # initialize the dropdowns in the app
 ref_gene_names, tissues_and_samples, tissues = fill_dropdowns_in_dash_application()
@@ -2347,13 +2215,6 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         (data, columns, b64_svg(path_for_tmp+"Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png")) : 
         data, columns, svg, warning, start, stop, chrom, strand, mutation, heatmap_relatives, heatmap_absolutes
     """
-    #reset files
-    if os.path.exists(path_for_tmp+"longest_ORF.fasta"):
-        os.remove(path_for_tmp+"longest_ORF.fasta")
-    if os.path.exists(path_for_tmp+"proteins.fasta"):
-        os.remove(path_for_tmp+"proteins.fasta")
-    if os.path.exists(path_for_tmp+"cDNA.fasta"):
-        os.remove(path_for_tmp+"cDNA.fasta")
     # either dropdown or start, stop, chrom als input 
     con = create_connection()
     triggered_id = ctx.triggered_id #check if update-button or search-button is triggered
