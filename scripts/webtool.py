@@ -355,8 +355,6 @@ def generate_svg(transcripts, position_mut=None):
     
     start_genomic_region_of_transcript, end_genomic_region_of_transcript,y = get_start_and_end_genomic_region(transcripts)
     absolut = (end_genomic_region_of_transcript-start_genomic_region_of_transcript) #100% = genomic region in absolut number
-    cDNA = get_cDNA(transcripts) #get cDNA as string from transcripts
-    cDNA_dict = split_fasta_string_to_dict(cDNA) #split cDNA into a dictionary with 1,3,5th.. element as key and 2,4,6th.. element as value
 
     # [ ] TODO - x and y
     x_start = 0 
@@ -417,7 +415,9 @@ def generate_svg(transcripts, position_mut=None):
 
     y_start = y_start+20
     
-    proteins = {}
+    longest_transcript=None
+    max_length=0
+
     #draw each exon in svg
     y = y_start # y-axis of each exon in svg
     for transcript in transcripts: #for each transcript draw exon, intron, ORF
@@ -438,33 +438,20 @@ def generate_svg(transcripts, position_mut=None):
             
         chrom = exons[0][2]
         strand = exons[0][3]
+        orf = find_longest_ORF(transcript) #find start stop in cDNA of longest ORF
 
-        #calculate ORF of each transcript
-        cDNA_string = cDNA_dict.get(transcript) #get cDNA of transcript
-        start_pos, end_pos, ORF_seq, protein = find_longest_ORF(cDNA_string, strand, transcript) #find start stop in cDNA of longest ORF
-        proteins[transcript] = protein
-
-        if ORF_seq != "No ORF found" or None: #if ORF is found
-            # print("ORF found for transcript: "+transcript, start_pos, end_pos)
-            #get cDNA position of each exon
-            positions_of_exons_in_cDNA = get_cDNA_pos_of_each_exon(exons)
-            # print(positions_of_exons_in_cDNA)
-            # check in if ORF pos is in exon
-            for i in positions_of_exons_in_cDNA:
-                if start_pos >= i[2] and start_pos <= i[3]:
-                    orf_start_in_genome = i[0] + start_pos-i[2]
-                if end_pos >= i[2] and end_pos <= i[3]:
-                    orf_end_in_genome = i[0] + end_pos-i[2]
+        if orf!=None:
+            start_pos, end_pos, orf_start_in_genome, orf_end_in_genome = orf
+            if abs(end_pos-start_pos)+1>max_length:
+                max_length=abs(end_pos-start_pos)+1
+                longest_transcript=transcript
 
             # calculate start/end position of open reading frame
-            start = ((absolut-(end_genomic_region_of_transcript-orf_start_in_genome))*size)//(absolut)
-            end = ((absolut-(end_genomic_region_of_transcript-orf_end_in_genome))*size)//(absolut)
+            start = ((absolut-(end_genomic_region_of_transcript-min(orf_start_in_genome,orf_end_in_genome)))*size)//(absolut)
+            end = ((absolut-(end_genomic_region_of_transcript-max(orf_start_in_genome,orf_end_in_genome)))*size)//(absolut)
             # draw orf with no opacity
-            if str(transcript).startswith("NSTRG"):
-                orf = svgwrite.shapes.Rect(insert=(40+start, y-2), size=((end-start) ,10), fill='#ff6361' ,opacity='0.6')
-            else:
-                orf = svgwrite.shapes.Rect(insert=(40+start, y-2), size=((end-start) ,10), fill='#ffa600' ,opacity='0.6')
-            d.add(orf)
+            d.add( svgwrite.shapes.Rect(insert=(40+start, y-2), size=((end-start) ,10), opacity='0.6',
+                fill='#ff6361' if str(transcript).startswith("NSTRG") else '#ffa600' ))
         
         transcript_id = svgwrite.text.Text(str(transcript), insert=(size+50,y+5), style="font-size:24")
         d.add(transcript_id)
@@ -472,7 +459,6 @@ def generate_svg(transcripts, position_mut=None):
 
     #draw domains of longest protein in svg
     #find domains of each protein and return list of domains for longest protein
-    _, longest_transcript = get_max_flow(proteins)
     domains = find_domains_from_database(longest_transcript)
 
     #for each domain in list of domains, calculate position in svg
@@ -546,60 +532,35 @@ def get_cDNA_pos_of_each_exon(exons):
     return cDNA_pos
 
 
-def find_longest_ORF(cDNA, strandness, transcript):
-    """Find longest ORF in cDNA with respect to strandness
-    Take cDNA check if gene comes from + or - strand
-    if strand is minus, take the reverse complement 
-    then search for the longest ORF
-    and return start and stop postition of longest ORF in the plus DNA strand
+def find_longest_ORF(transcript):
+    """Find longest ORF of transcript_id "transcript" from database. 
+       Currently, the database layout works correctly only if all exons appears
+       in syntheny.  start_pos and end_pos are the distances of the first and
+       last base that are part of the longest ORF from the first base of the
+       transcripts, counted on the forward strand of the exons; regardless of
+       which strand in transcribed.  start_on_genome and end_on_genome are
+       positions on the chromosome, and start_on_genome is smaller than
+       end_on_genome if the reverse strand is transcribed.
 
     Args:
-        cDNA (string): cDNA sequence of transcript but from plus strand
-        strandness (string): "+" or "-"
-        transcript (string): transcript name
+        transcript (string): transcript_id
 
     Returns:
-        (int, int, string, string): start_pos on plus, end_pos on plus, longest_ORF, longest_protein
+        (int, int, int, int): start_pos on plus, end_pos on plus, start_on_genome, end_on_genome
     """    """"""
-    originalcDNA = cDNA #make a copy of DNA
-    start = 0
-    ORFs = [] #list with all ORFs and start and end position
 
-    # if strand is minus, take the reverse complement if the cDNA 
-    # in order to search for the longest ORF
-    if strandness == "-":
-        cDNA = str(Seq(cDNA).reverse_complement())
-        
-    if 'ATG' in cDNA:
-        for startMatch in re.finditer('ATG',cDNA): #check if substring starts with ATG
-            remaining = cDNA[startMatch.start():]
-            for stopMatch in re.finditer('TAA|TGA|TAG', remaining): #check for substring ending with stopcodons
-                substring = remaining[:stopMatch.end()]
-                if len(substring) % 3 == 0: #check if triplets
-                    start = startMatch.start() #get start position in cDNA or if "-" on reverse complement cDNA
-                    end = start+(len(substring)-1) #get end position start+len()-1
-                    ORFs.append([substring,start,end]) #add ORF and start and end position to list
-                    break #break when first stop codon is seen
-    
-    #sort list of lists [[ORF,start,stop],...] by len of first element
-    ORFs = sorted(ORFs, key=lambda x: len(x[0]), reverse=True)
-    # print(ORFs[0][0][0:10], len(ORFs[0][0]), ORFs[1][0][0:10], len(ORFs[1][0]), ORFs[2][0][0:10], len(ORFs[2][0]))
-    
-    if len(ORFs)==0:
-        return (0, 0, "No ORF found", "No ORF found")
-    
-    longest = ORFs[0] # save first item in list as longest ORF
-    # match the start and stop position of the ORF on the original cDNA
-    if strandness == "-": #if strand is minus, get original positions on + strand
-        start_pos = (len(originalcDNA)-1)-longest[2]
-        end_pos = (len(originalcDNA)-1)-longest[1]
+    con = create_connection()
+    s, e, gs, ge = con.execute( """select sum( min(e.end,t.cds_start,t.cds_end) - min(e.start,t.cds_start,t.cds_end) ),
+                                          sum( min(e.end,max(t.cds_start,t.cds_end)) - min(e.start,max(t.cds_start,t.cds_end)) ) - 1,
+                                          t.cds_start, t.cds_end-1
+                                   from transcripts t, exons e
+                                   where t.transcript_id=? and e.transcript=t.id""",
+                       (transcript,) ).fetchone() ;
+    con.close() 
+    if s==None or e==None or gs==None or ge==None:
+        return None
     else:
-        start_pos = longest[1]
-        end_pos = longest[2]
-
-    cDNA_Seq = Seq(longest[0])
-    protein = cDNA_Seq.translate(to_stop=True, cds=True)
-    return (start_pos, end_pos, longest[0], str(protein))
+        return (s,e,gs,ge)
 
 
 def get_cDNA(transcripts):
@@ -647,6 +608,9 @@ def get_proteins(ref_gene_id):
     """ Get all proteins from all transcripts corresponding to ref_gene_id
     # TODO - ? change ref_gene_id to gene_name ? 
 
+    XXX  This is broken for now, because the proteins.fasta is no longer
+    available and find_longest_ORF changed in an incompatible way
+
     Args:
         gene_id (string): gene_id like "NSTRG.1"
 
@@ -686,7 +650,7 @@ def get_proteins(ref_gene_id):
             res = cur.execute(statement_get_all_transcripts, [transcript])
             strand = res.fetchone()[0]
             logging.debug("strand: %s", strand)
-            start_pos, end_pos, ORF, protein = find_longest_ORF(cDNA_string, strand, transcript)
+            start_pos, end_pos, ORF, protein = find_longest_ORF(transcript)
             #append protein to string
             proteins += ">"+transcript+"\n"+protein+"\n"
         con.close()
