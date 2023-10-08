@@ -315,7 +315,7 @@ def plot_heatmap(tpms, transcripts, output_path, relative=True):
     if os.path.exists(output_path):
         os.remove(output_path)
 
-    plt.figure(figsize=(40, 30))
+    plt.figure(figsize=(4, 3))
     sns.set(font_scale=2.5)
     sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1)
 
@@ -324,10 +324,10 @@ def plot_heatmap(tpms, transcripts, output_path, relative=True):
     else:
         plt.title('TPM (mean across tissue)')
     plt.yticks(np.arange(len(transcripts)) + 0.5, transcripts, rotation=0)
-    plt.xticks(rotation=45, ha='right', fontsize=20)
+    plt.xticks(rotation=45, ha='right', fontsize=2)
 
-    plt.xlabel('tissues', fontsize=30)
-    plt.ylabel('transcripts', fontsize=30)
+    plt.xlabel('tissues', fontsize=3)
+    plt.ylabel('transcripts', fontsize=3)
     plt.tight_layout()
     
     try:
@@ -821,7 +821,6 @@ def get_TPM_from_tissues(gene_id, tissues):
     df_result = pd.DataFrame()
     i = 0
     for tissue in tissues:
-        print(tissue)
         statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
         res = cur.execute(statement, (tissue, gene_id))
         df_A = pd.DataFrame(res.fetchall())
