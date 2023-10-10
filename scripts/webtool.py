@@ -14,7 +14,7 @@ import sqlite3
 import dash_bootstrap_components as dbc
 import svgwrite
 import base64
-import pybedtools
+import twobitreader
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
@@ -564,52 +564,40 @@ def find_longest_ORF(transcript):
 
 
 def get_cDNA(transcripts):
-    """Get cDNA sequence for each transcript in list of transcripts
-    use hg38 genome fasta
+    """Get cDNA sequence for each transcript in list of transcripts.
+    Uses hg38 genome 2bit.  (2bit is smaller and faster than Fasta.  A lot.)
 
     Args:
         transcripts (list): list of transcript ids like NM_001005484.1, NM_001005485.1 
 
     Returns:
-        (string): cDNA sequences of each transcript_id in fasta format
+        (dict): maps each transcript_id to its cDNA sequence (a string)
     """
-    cDNA_file = ""
-    for current_transcript in transcripts: #for each transcript"
-        #get bed file and match this with genome fasta to get cDNA 
-            
-        #to do this get exon structure of transcript
-        statement_get_exon_structure = "SELECT e.chrom, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==? ORDER BY t.transcript_id"
-        con = create_connection()
-        cur = con.cursor()
-        res = cur.execute(statement_get_exon_structure, [current_transcript])
-        df = pd.DataFrame(res.fetchall())
-        df.columns=["chromosom", "start", "end"]
-        #safe tmp bed file
-        df.to_csv(path_for_tmp+"gene.bed",sep="\t", index=False, header=False)
-            
-        cDNA_file += ">" +current_transcript+ "\n"
-        cDNA_transcript=""
-        #getfasta from bed
-        gene_bed = pybedtools.BedTool(path_for_tmp+"gene.bed")
-        fasta = pybedtools.BedTool("../analysis/hg38.fna")
-        a = gene_bed.sequence(fi=fasta)
-        with open(a.seqfn) as f:
-            for line in f:
-                if not(line.strip().startswith(">")):
-                    cDNA_transcript += line.strip()
-        f.close()
-        cDNA_file += cDNA_transcript+"\n"
+    cDNAs = {}
+    revcom = str.maketrans("ACGT","TGCA")
+    genome = twobitreader.TwoBitFile('/var/cache/GRCh38.2bit')
+    con = create_connection()
 
-    #remove bed file
-    os.remove(path_for_tmp+"gene.bed")
-    return cDNA_file
+    for current_transcript in transcripts: 
+        statement_get_exon_structure = "SELECT e.chrom, e.strand, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==? ORDER BY e.sequence_number"
+
+        cur_seq = []
+        cur = con.execute(statement_get_exon_structure, [current_transcript])
+        for chrom, strand, start, end in cur:
+            if strand!='-':
+                cur_seq.append(genome[chrom][start:end])
+            else:
+                cur_seq.insert(0, genome[chrom][start:end].translate(revcom)[::-1])
+        cur.close()
+        cDNAs[current_transcript] = ''.join(cur_seq)
+
+    con.close()
+    return cDNAs
+
 
 def get_proteins(ref_gene_id):
     """ Get all proteins from all transcripts corresponding to ref_gene_id
     # TODO - ? change ref_gene_id to gene_name ? 
-
-    XXX  This is broken for now, because the proteins.fasta is no longer
-    available and find_longest_ORF changed in an incompatible way
 
     Args:
         gene_id (string): gene_id like "NSTRG.1"
@@ -618,42 +606,38 @@ def get_proteins(ref_gene_id):
         exceptions.PreventUpdate: if no ref_gene_id was found
 
     Returns:
-        (string): proteins in fasta format
+        (dict): maps transcript_ids to their protein sequences
     """
     print("---- get_proteins from all transcript corresponding from gene_id ----")
-    proteins = ""
+    proteins = {}
     statement_get_all_transcripts = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
     # statement_get_all_transcripts = "SELECT gene_id,transcript_id FROM transcripts WHERE gene_name=?"    
     if ref_gene_id is None:
         raise exceptions.PreventUpdate
     con = create_connection()
-    cur = con.cursor()
-    res = cur.execute(statement_get_all_transcripts, [ref_gene_id])
+    res = con.execute(statement_get_all_transcripts, [ref_gene_id])
     df = pd.DataFrame(res.fetchall())
+    con.close()
+
     if df.empty:
-        con.close()
         return (no_update, no_update, "Not available")
     else:
         df.columns = ["gene_id","transcript_id"]
-        #get all transcipt_ids from df
-        transcripts = df["transcript_id"].tolist()
-        #get cDNA of transcripts
-        cDNA = get_cDNA(transcripts)
-        cDNA_dict = split_fasta_string_to_dict(cDNA) #split cDNA into a dictionary with 1,3,5th.. element as key and 2,4,6th.. element as value
-        #for each key in dictionary 
+        cDNA_dict = get_cDNA(df["transcript_id"])
+        
         for transcript in cDNA_dict:
             logging.debug("transcript: %s", transcript)
-            cDNA_string = cDNA_dict.get(transcript) #get cDNA of transcript
-            logging.debug("cDNA_string: %s", cDNA_string)
-            #find longest ORF in cDNA
-            statement_get_all_transcripts = "SELECT e.strand FROM transcripts as t, exons as e WHERE t.transcript_id=? and e.transcript=t.id"
-            res = cur.execute(statement_get_all_transcripts, [transcript])
-            strand = res.fetchone()[0]
-            logging.debug("strand: %s", strand)
-            start_pos, end_pos, ORF, protein = find_longest_ORF(transcript)
-            #append protein to string
-            proteins += ">"+transcript+"\n"+protein+"\n"
-        con.close()
+            cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
+            logging.debug("cDNA_string: %s", cDNA_Seq)
+            start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
+
+            print("--ORF from %d to %d--" % (start_genome, end_genome))
+            if start_genome<=end_genome:
+                proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
+            else:
+                s = cDNA_Seq.length() - end_pos+1
+                e = cDNA_Seq.length() - start_pos
+                proteins[transcript] = cDNA_Seq[s:e].translate()
         return proteins
 
 
@@ -668,7 +652,7 @@ def get_cDNA_from_gene_id(ref_gene_id):
         exceptions.PreventUpdate: if no ref_gene_id was found
 
     Returns:
-        (string): cDNA in fasta format
+        (dict): maps transcript_id to cDNA sequence
     """
     print("---- get cDNA from all transcript corresponding from gene_id ----")
     proteins = ""
@@ -691,88 +675,6 @@ def get_cDNA_from_gene_id(ref_gene_id):
         cDNA = get_cDNA(transcripts)
         con.close()
         return cDNA
-
-def get_cDNA_from_gene_id_for_download(ref_gene_id):
-    """Get all proteins from all transcripts corresponding to ref_gene_id
-    # TODO - ? change ref_gene_id to gene_name ? 
-
-    Args:
-        gene_id (string): gene_id like "NSTRG.1"
-
-    Raises:
-        exceptions.PreventUpdate: if no ref_gene_id was found
-
-    Returns:
-        (string): cDNA in fasta format
-    """
-    print("---- get cDNA from all transcript corresponding from gene_id ----")
-    proteins = ""
-    statement_get_all_transcripts = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
-    # statement_get_all_transcripts = "SELECT gene_id,transcript_id FROM transcripts WHERE gene_name=?"    
-    if ref_gene_id is None:
-        raise exceptions.PreventUpdate
-    con = create_connection()
-    cur = con.cursor()
-    res = cur.execute(statement_get_all_transcripts, [ref_gene_id])
-    df = pd.DataFrame(res.fetchall())
-    if df.empty:
-        con.close()
-        return (no_update, no_update, "Not available")
-    else:
-        df.columns = ["gene_id","transcript_id"]
-        #get all transcipt_ids from df
-        transcripts = df["transcript_id"].tolist()
-        #get cDNA of transcripts
-        cDNA = get_cDNA_for_download(transcripts)
-        con.close()
-        return cDNA
-
-def get_cDNA_for_download(transcripts):
-    """Get cDNA sequence for each transcript in list of transcripts
-    use hg38 genome fasta
-
-    Args:
-        transcripts (list): list of transcript ids like NM_001005484.1, NM_001005485.1 
-
-    Returns:
-        (string): cDNA sequences of each transcript_id in fasta format
-    """
-    cDNA_file = ""
-    for current_transcript in transcripts: #for each transcript"
-        #get bed file and match this with genome fasta to get cDNA 
-            
-        #to do this get exon structure of transcript
-        statement_get_exon_structure = "SELECT e.chrom, e.start, e.end, e.strand from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==? ORDER BY t.transcript_id"
-        con = create_connection()
-        cur = con.cursor()
-        res = cur.execute(statement_get_exon_structure, [current_transcript])
-        df = pd.DataFrame(res.fetchall())
-        #generate df with chrom, start, end and another with strand
-        df.columns=["chromosom", "start", "end", "strand"]
-        df_for_bed = df[["chromosom", "start", "end"]] #bed for taking cDNA from genome fasta
-        df_for_bed.columns=["chrom", "start", "end"] 
-        strand = df["strand"].iloc[0]
-        #safe tmp bed file
-        df_for_bed.to_csv(path_for_tmp+"gene.bed",sep="\t", index=False, header=False)
-        cDNA_file += ">" +current_transcript+ "\n"
-        cDNA_transcript=""
-        #getfasta from bed
-        gene_bed = pybedtools.BedTool(path_for_tmp+"gene.bed")
-        fasta = pybedtools.BedTool("../analysis/hg38.fna")
-        a = gene_bed.sequence(fi=fasta)
-        with open(a.seqfn) as f:
-            for line in f:
-                if not(line.strip().startswith(">")):
-                    cDNA_transcript += line.strip()
-            if strand == "-":
-                print("minus strand")
-                cDNA_transcript = str(Seq(cDNA_transcript).reverse_complement())
-        f.close()
-        cDNA_file += cDNA_transcript+"\n"
-
-    #remove bed file
-    os.remove(path_for_tmp+"gene.bed")
-    return cDNA_file
 
 
 def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
@@ -1891,10 +1793,9 @@ def downloadcDNA(n_clicks, value):
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
-        # value = value.split(" ")[0]
-        cDNA = get_cDNA_from_gene_id_for_download(value)
-        # cDNA = get_cDNA_from_gene_id(value)
-        return dict(content=cDNA,filename="cDNA_"+value+".fasta")
+        cDNA = get_cDNA_from_gene_id(value)
+        fasta = ''.join([ ">"+key+"\n"+cDNA[key]+"\n" for key in cDNA ])
+        return dict(content=fasta,filename="cDNA_"+value+".fasta")
 
 @app.callback(
    Output('download-proteins','data'),
@@ -1916,9 +1817,9 @@ def downloadProteins(n_clicks,value):
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
-        # value = value.split(" ")[0]
         proteins = get_proteins(value)
-        return dict(content=proteins,filename="proteins_"+value+".fasta")
+        fasta = ''.join([ ">"+key+"\n"+str(proteins[key])+"\n" for key in proteins ])
+        return dict(content=fasta,filename="proteins_"+value+".fasta")
     
 @app.callback(
    Output('download-domains','data'),
