@@ -144,19 +144,17 @@ def b64_image(image_filename):
          image = f.read()
     return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
-def b64_svg(image_filename):
+def b64_svg(drawing):
     """encodes svg for embedding in website
 
     Args:
-        image_filename (string): path to svg
+        drawing (Drawing): an svgwrite.Drawing
 
     Returns:
         bytes: encoded base 64 svg
     """    """
     """
-    with open(image_filename, 'rb') as f:
-         image = f.read()
-    return 'data:image/svg+xml;base64,' + base64.b64encode(image).decode('utf-8')
+    return 'data:image/svg+xml;base64,' + base64.b64encode(drawing.tostring().encode('utf-8')).decode('utf-8')
 
 def get_start_and_end_genomic_region(transcripts):
     """Get start coordinate and end coordinate of genomic region were 
@@ -348,10 +346,10 @@ def generate_svg(transcripts, position_mut=None):
         position_mut (string, optional): Mutations or list of mutations like '12344566,123456' Defaults to None.
 
     Returns:
-        int, int, string, string: start_genomic_region_of_transcript, end_genomic_region_of_transcript, chrom, strand
+        int, int, string, string, drawing: start_genomic_region_of_transcript, end_genomic_region_of_transcript, chrom, strand, drawing
     """
 
-    print("--Generate png--")
+    print("--Generate svg--")
     
     start_genomic_region_of_transcript, end_genomic_region_of_transcript,y = get_start_and_end_genomic_region(transcripts)
     absolut = (end_genomic_region_of_transcript-start_genomic_region_of_transcript) #100% = genomic region in absolut number
@@ -361,8 +359,7 @@ def generate_svg(transcripts, position_mut=None):
     y_start = 20 
 
     size = 2000 #size of whole svg
-    # d = drawing 
-    d = svgwrite.Drawing(viewBox="0 0 "+ str(size+300) +" "+ str(y+450) +"", filename=path_for_tmp+"Gene.svg")
+    d = svgwrite.Drawing(viewBox="0 0 "+ str(size+300) +" "+ str(y+450) +"")
     #explain colors in svg
     d.add(svgwrite.text.Text("red = displays the longest ORF for a potentially new transcript, might not be the 'true' one.",\
                               insert=(x_start, y_start), style="font-size:24"))
@@ -491,22 +488,15 @@ def generate_svg(transcripts, position_mut=None):
         d.add(domain_name)
 
     #draw mutation position in svg
-    if position_mut!=None:
-        # if , in position_mut, then split
-        if "," in position_mut:
-            positions_mut =  position_mut.split(",")
-            for pos in positions_mut:
-                mutation_position = ((absolut-(end_genomic_region_of_transcript-int(int(pos))))*size)//(absolut)
-                mutation = svgwrite.shapes.Rect(insert=(40+mutation_position, y_start), size=(1,y+20-y_start), fill='#bc5090')
-                d.add(mutation)
-        else:
-            mutation_position = ((absolut-(end_genomic_region_of_transcript-int(position_mut)))*size)//(absolut)
+    if position_mut!=None and position_mut!='':
+        positions_mut =  position_mut.split(",")
+        for pos in positions_mut:
+            mutation_position = ((absolut-(end_genomic_region_of_transcript-int(int(pos))))*size)//(absolut)
             mutation = svgwrite.shapes.Rect(insert=(40+mutation_position, y_start), size=(1,y+20-y_start), fill='#bc5090')
             d.add(mutation)
         
-    d.save()
-    print("--Generate png done--")
-    return start_genomic_region_of_transcript, end_genomic_region_of_transcript, chrom, strand
+    print("--Generate svg done--")
+    return start_genomic_region_of_transcript, end_genomic_region_of_transcript, chrom, strand, d
 
 def get_cDNA_pos_of_each_exon(exons):
     """Generates a tuple for exon in exons list
@@ -2076,7 +2066,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         exceptions.PreventUpdate: _description_
 
     Returns:
-        (data, columns, b64_svg(path_for_tmp+"Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png")) : 
+        (data, columns, b64_svg("Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png")) : 
         data, columns, svg, warning, start, stop, chrom, strand, mutation, heatmap_relatives, heatmap_absolutes
     """
     # either dropdown or start, stop, chrom als input 
@@ -2110,7 +2100,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             generate_heatmap(result_df, False)
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand = generate_svg(result_df["transcript_id"])
+            start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"])
 
             number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
             #add new row with NONE in every column except "# of exons" == number_inner_exons
@@ -2121,7 +2111,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             
             #calculate statisical test AVONVA for TPM over all tissues
             
-            return (data, columns, b64_svg(path_for_tmp+"Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
+            return (data, columns, b64_svg("Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
 
         else:
             #if user did not select group A or B then present only transcripts in search-output-ref-geneA 
@@ -2140,11 +2130,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 columns = [{"name": i, "id": i} for i in df.columns]
                 data = df.to_dict('records')
                 con.close()
-                if (mutation!=None) and (mutation!=""):
-                    start, stop, chrom, strand = generate_svg(transcripts, mutation)
-                else:
-                    start, stop, chrom, strand = generate_svg(transcripts)
-                return (data, columns, b64_svg(path_for_tmp+"Gene.svg"), "No groups selected! The transcripts \
+                start, stop, chrom, strand, drawing = generate_svg(transcripts,mutation)
+                return (data, columns, b64_svg(drawing), "No groups selected! The transcripts \
                         shown here are possible variants resulting from all analyzed datasets (a list of all datasets see 'info').\
                          This means the user sees a global, unified set of transcripts across multiple RNA-Seq samples.\
                          To compare the quantification (TPM) of transcript-variants per tissue or sample, \
@@ -2184,8 +2171,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                         
                 con.close()
                 print("Average TPM calcuated")
-                start, stop, chrom, strand = generate_svg(df_result["transcript_id"])
-                return (data, columns, b64_svg(path_for_tmp+"Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
+                start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"])
+                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
@@ -2211,11 +2198,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             data = merged_df.to_dict('records')
             con.close()
             print("Average TPM calcuated")
-            if (mutation!=None) and (mutation!=""):
-                start, stop, chrom, strand = generate_svg(merged_df["transcript_id"], mutation)
-            else:
-                start, stop, chrom, strand = generate_svg(merged_df["transcript_id"])
-            return (data, columns, b64_svg(path_for_tmp+"Gene.svg"),'', start, stop, chrom, strand, mutation, b64_image(path_for_tmp+"heatmap_relatives.png"),b64_image(path_for_tmp+"heatmap_absolutes.png"))
+            start, stop, chrom, strand, drawing = generate_svg(merged_df["transcript_id"])
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(path_for_tmp+"heatmap_relatives.png"),b64_image(path_for_tmp+"heatmap_absolutes.png"))
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
@@ -2226,12 +2210,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             df_result = df_result.sort_values(by=['transcript_id'])
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
-            if (mutation!=None) and (mutation!=""):
-                start_result, stop_results, chrom_results, strand_results = generate_svg(df_result["transcript_id"], mutation)
-            else:
-                start_result, stop_results, chrom_results, strand_results = generate_svg(df_result["transcript_id"])
+            start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
                     
-            return (data, columns, b64_svg(path_for_tmp+"Gene.svg"), "Updated", start, stop, chrom, strand, mutation, None)    
+            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None)    
         else:
             print("--groups selected--")
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
@@ -2248,11 +2229,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             data = df_result.to_dict('records')
             generate_heatmap(df_result, True)
             generate_heatmap(df_result, False)
-            if (mutation!=None) and (mutation!=""):
-                start_result, stop_results, chrom_results, strand_results = generate_svg(df_result["transcript_id"] ,mutation)
-            else:
-                start_result, stop_results, chrom_results, strand_results = generate_svg(df_result["transcript_id"])            
-            return (data, columns, b64_svg(path_for_tmp+"Gene.svg"),'', start, stop, chrom, strand, mutation, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
+            start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"] ,mutation)
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
     
         
 # start the server of the  app
