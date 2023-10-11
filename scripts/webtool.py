@@ -26,20 +26,15 @@ import subprocess
 import math
 from scipy import stats
 import json
-import logging
-logging.basicConfig(filename='example.log', level=logging.DEBUG)
-# logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
 import warnings
 # WARNING: i used the append function which will be deprecated in the future
 warnings.simplefilter(action='ignore', category=FutureWarning) 
 
 #################### 1.0 Helper Functions ############################
-####### global variables #######
-#set path for tmp folder by process id of current user 
-current_process_id = str(os.getpid())
-path_for_tmp = "/var/tmp/"+current_process_id+"/"
-if not os.path.exists(path_for_tmp):
-    os.makedirs(path_for_tmp)
+####### configuration #######
+database_file = "/var/cache/stringtie.db"
+genome_file = "/var/cache/GRCh38.2bit"
+url_base_pathname = "/Splice-O-Mat-Exp/"
 
 ####### helper functions #######
 class StdevFunc:
@@ -123,10 +118,9 @@ def create_connection():
     Returns:
         con: Connection object or None
     """    """""" 
-    # TODO - change path and name of database in the future 
     con = None
     try:
-        con = sqlite3.connect("/var/cache/stringtie.db")
+        con = sqlite3.connect(database_file)
     except OSError as e:
         print(e)
     return con
@@ -338,9 +332,8 @@ def plot_heatmap(tpms, transcripts, relative=True):
         print(f"An error occurred while saving the heatmap: {str(e)}")
 
 def generate_svg(transcripts, position_mut=None):
-    """Generates a svg for a transcript variants of the list transcripts
-    also plots the mutation position if position_mut is given
-    writes svg and png in "path_for_tmp+"Gene.[png,svg]"
+    """Generates a svg for a transcript variants of the list transcripts.
+    Also plots the mutation position if position_mut is given.
     # TODO - x and y axis with more meanigful names
 
     Args:
@@ -567,7 +560,7 @@ def get_cDNA(transcripts):
     """
     cDNAs = {}
     revcom = str.maketrans("ACGT","TGCA")
-    genome = twobitreader.TwoBitFile('/var/cache/GRCh38.2bit')
+    genome = twobitreader.TwoBitFile(genome_file)
     con = create_connection()
 
     for current_transcript in transcripts: 
@@ -618,9 +611,9 @@ def get_proteins(ref_gene_id):
         cDNA_dict = get_cDNA(df["transcript_id"])
         
         for transcript in cDNA_dict:
-            logging.debug("transcript: %s", transcript)
+            print("transcript: %s" % transcript)
             cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
-            logging.debug("cDNA_string: %s", cDNA_Seq)
+            print("cDNA_string: %s" % cDNA_Seq)
             start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
 
             print("--ORF from %d to %d--" % (start_genome, end_genome))
@@ -832,13 +825,12 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     # now get the length, number of exons, start and stop of each transcript
     con = create_connection()
     cur = con.cursor()
-    transcripts = df_result["transcript_id"].to_list()
     
     length_transcript = []
     start = []
     end = []
     number_exons = [] 
-    for transcript in transcripts: #for each transcript get length, number of exons, start, stop
+    for transcript in df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
         cur = con.cursor()
@@ -1022,13 +1014,12 @@ def calculate_percentage_for_TPM(df_result):
     """    
     con = create_connection()
     cur = con.cursor()
-    transcripts = df_result["transcript_id"].to_list()
     
     length_transcript = []
     start = []
     end = []
     number_exons = [] 
-    for transcript in transcripts: #for each transcript get length, number of exons, start, stop
+    for transcript in df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
         cur = con.cursor()
@@ -1068,8 +1059,10 @@ def calculate_percentage_for_TPM(df_result):
 
 def calculate_inner_exons(gene_id):
     """Calculate inner exons for each transcript of gene_id
-    this meands only exons expect first and last exon
+    this means only exons except first and last exon
     this was a wish from Torsten Schoeneberg
+
+    XXX Isn't this a job for SQL?
 
     Args:
         gene_id (string): gene_id of gene
@@ -1102,7 +1095,7 @@ def calculate_inner_exons(gene_id):
 ################ 2.0 DASH APP #########################
 # TODO - use dbc.Col and dbc.Row to make the app responsive
 #APP Instance
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP,'assets/styles.css'], url_base_pathname='/Splice-O-Mat-Exp/')
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP,'assets/styles.css'], url_base_pathname=url_base_pathname) 
 
 # initialize the dropdowns in the app
 ref_gene_names, tissues_and_samples, tissues = fill_dropdowns_in_dash_application()
@@ -1623,11 +1616,7 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
     cur = con.cursor()
     df_final = pd.DataFrame()
     columns_list = []
-    i = 0
-    #for each tissue in all_tissues
     for tissue in tissues: 
-        if i==2:
-            break
         # print(tissue['value']) 
         df_tissue = pd.DataFrame(columns=columns_list)
         #get value at key "label" from dictionary
