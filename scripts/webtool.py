@@ -14,6 +14,7 @@ import sqlite3
 import dash_bootstrap_components as dbc
 import svgwrite
 import base64
+from io import BytesIO
 import twobitreader
 import seaborn as sns
 import numpy as np
@@ -130,18 +131,16 @@ def create_connection():
         print(e)
     return con
 
-def b64_image(image_filename):
+def b64_image(image):
     """encodes image for embedding in website
 
     Args:
-        image_filename (string): path to image
+        image (string): a png image
 
     Returns:
-        bytes: decoded base 64 image
+        bytes: rendered image encoded as png and base64
     """    """
     """
-    with open(image_filename, 'rb') as f:
-         image = f.read()
     return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
 def b64_svg(drawing):
@@ -282,7 +281,11 @@ def generate_heatmap(result_df, relatives=True):
         result_df (pd.DataFrame): Dataframe of transcripts and their TPMs.
         relatives (bool, optional): If True, the heatmap will be generated with relative values.If False heatmap \
             produces absolutes TPMS. Defaults to True.
+
+    Returns:
+        a png file in a buffer
     """
+    
     print("--Generate heatmap--")
     try:
         transcripts = result_df["transcript_id"]
@@ -291,30 +294,27 @@ def generate_heatmap(result_df, relatives=True):
             columns_tmp = tpms_values.columns
             columns_tmp = [col.replace('TPM(%)', '') for col in columns_tmp]
             tpms_values.columns = columns_tmp
-            plot_heatmap(tpms_values, transcripts, path_for_tmp+"heatmap_relatives.png")
+            return plot_heatmap(tpms_values, transcripts, True)
         else:
             tpms_values = result_df.filter(regex='mean')
             columns_tmp = tpms_values.columns
             columns_tmp = [col.replace('TPM(mean)', '') for col in columns_tmp]
             tpms_values.columns = columns_tmp
-            plot_heatmap(tpms_values, transcripts, path_for_tmp+"heatmap_absolutes.png", False)
+            return plot_heatmap(tpms_values, transcripts, False)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
-def plot_heatmap(tpms, transcripts, output_path, relative=True):
+def plot_heatmap(tpms, transcripts, relative=True):
     """
     Plot the heatmap of TPM values of transcripts.
 
     Args:
         tpms_relative_values (pd.DataFrame): Dataframe containing relative TPMs.
         transcripts (pd.Series): Series of transcript names.
-        output_path (str): Path to save the heatmap image.
     """
-    if os.path.exists(output_path):
-        os.remove(output_path)
 
     plt.figure(figsize=(4, 3))
-    sns.set(font_scale=2.5)
+    sns.set(font_scale=0.4)
     sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1)
 
     if relative:
@@ -329,9 +329,11 @@ def plot_heatmap(tpms, transcripts, output_path, relative=True):
     plt.tight_layout()
     
     try:
-        plt.savefig(output_path, dpi=300)
+        output = BytesIO()
+        plt.savefig(output, dpi=300)
         plt.clf()
-        print(f"Heatmap saved to {output_path}")
+        print(f"Heatmap created")
+        return output.getvalue()
     except Exception as e:
         print(f"An error occurred while saving the heatmap: {str(e)}")
 
@@ -2066,7 +2068,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         exceptions.PreventUpdate: _description_
 
     Returns:
-        (data, columns, b64_svg("Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png")) : 
+        (data, columns, b64_svg("Gene.svg"),'', start, stop, chrom, strand, None, b64_image("heatmap_relatives.png")) : 
         data, columns, svg, warning, start, stop, chrom, strand, mutation, heatmap_relatives, heatmap_absolutes
     """
     # either dropdown or start, stop, chrom als input 
@@ -2096,8 +2098,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             result_df = get_TPM_from_tissues(gene_id, tissue_dropdown)
             
             #generate heatmap with all tissues and transcripts
-            generate_heatmap(result_df, True)
-            generate_heatmap(result_df, False)
+            heatmap_rel = generate_heatmap(result_df, True)
+            heatmap_abs = generate_heatmap(result_df, False)
             con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"])
@@ -2111,7 +2113,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             
             #calculate statisical test AVONVA for TPM over all tissues
             
-            return (data, columns, b64_svg("Gene.svg"),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
             #if user did not select group A or B then present only transcripts in search-output-ref-geneA 
@@ -2164,15 +2166,15 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 df_result = calculate_percentage_for_TPM(merged_df)
                 #sort df_result by transcript_id
                 df_result = df_result.sort_values(by=['transcript_id'])
-                generate_heatmap(df_result, True)
-                generate_heatmap(df_result, False)
+                heatmap_rel = generate_heatmap(df_result, True)
+                heatmap_abs = generate_heatmap(df_result, False)
                 columns = [{"name": i, "id":i } for i in df_result.columns]
                 data = df_result.to_dict('records')
                         
                 con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"])
-                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
+                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
@@ -2191,15 +2193,15 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             df_results = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
             merged_df = merged_df.append(df_results)
             #generate heatmap with all tissues and transcripts
-            generate_heatmap(merged_df, True)
-            generate_heatmap(merged_df, False)
+            heatmap_rel = generate_heatmap(merged_df, True)
+            heatmap_abs = generate_heatmap(merged_df, False)
 
             columns = [{"name": i, "id":i } for i in merged_df.columns]
             data = merged_df.to_dict('records')
             con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(merged_df["transcript_id"])
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(path_for_tmp+"heatmap_relatives.png"),b64_image(path_for_tmp+"heatmap_absolutes.png"))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel),b64_image(heatmap_abs))
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
@@ -2227,10 +2229,10 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             df_result = df_result.sort_values(by=['transcript_id'])
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
-            generate_heatmap(df_result, True)
-            generate_heatmap(df_result, False)
+            heatmap_rel = generate_heatmap(df_result, True)
+            heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"] ,mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(path_for_tmp+"heatmap_relatives.png"), b64_image(path_for_tmp+"heatmap_absolutes.png"))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel), b64_image(heatmap_abs))
     
         
 # start the server of the  app
