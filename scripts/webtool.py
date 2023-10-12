@@ -26,9 +26,6 @@ import subprocess
 import math
 from scipy import stats
 import json
-import warnings
-# WARNING: i used the append function which will be deprecated in the future
-warnings.simplefilter(action='ignore', category=FutureWarning) 
 
 #################### 1.0 Helper Functions ############################
 ####### configuration #######
@@ -1076,16 +1073,17 @@ def calculate_inner_exons(gene_id):
     rows = cur.fetchall()
     df = pd.DataFrame(rows, columns=['transcipt_id','sequence_number', 'start', 'end'])
     #generate for each new transcript_id in df a new dataframe
-    df_results = pd.DataFrame(columns=['transcipt_id','sequence_number', 'start', 'end'])
+    df_results = [] 
     for transcript_id in df['transcipt_id'].unique():
         #get subset of df for transcript_id 
         df_subset = df[df['transcipt_id'] == transcript_id]
         #delete first and last entry in df_subset
         df_subset = df_subset.iloc[1:-1]
         #add df_subset to df_results
-        df_results = df_results.append(df_subset)
+        df_results.append(df_subset)
 
     #sort df_results for start and end
+    df_results = pd.concat(df_results)
     df_results = df_results.sort_values(by=['start', 'end'], ascending=True)
     #delete row if start and end numbers are the same as for another row in df_results
     df_results = df_results.drop_duplicates(subset=['start', 'end'], keep='first')
@@ -1606,15 +1604,9 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
                        
     #save second column from df_result as a list of transcript_ids
     transcript_ids = df_result.iloc[:,1].tolist()
-    columns_list = []
-    for element in transcript_ids:
-            columns_list.append(element + '_tissue')
-            columns_list.append(element + '_sample')
-            columns_list.append(element + '_TPM')
-    df_final = pd.DataFrame(columns=columns_list)
 
     cur = con.cursor()
-    df_final = pd.DataFrame()
+    df_final = [] 
     columns_list = []
     for tissue in tissues: 
         # print(tissue['value']) 
@@ -1634,8 +1626,9 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
             df_tissue[transcript+'_TPM'] = df_result['TPM']
 
         #append df_tissue to df_final 
-        df_final = df_final.append(df_tissue)
+        df_final.append(df_tissue)
     #drop every column including "tissue" in the name except the first one
+    df_final = pd.concat(df_final)
     df_final.drop(df_final.filter(regex='tissue').columns[1:], axis=1, inplace=True)
     #drop every column including "sample" in the name except the first one
     df_final.drop(df_final.filter(regex='sample').columns[1:], axis=1, inplace=True)
@@ -1821,15 +1814,25 @@ def downloadDomains(n_clicks,value):
     """    
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
-    if n_clicks is not None and n_clicks>0:
-        # value = value.split(" ")[0]
-        # Run InterProScan on the protein file
-        with open(path_for_tmp+'interproscan_alldomains.txt', 'w') as fd:
-            subprocess.run(["../my_interproscan/interproscan-5.60-92.0/interproscan.sh", "-i", path_for_tmp+"proteins.fasta", "-f", "tsv", "--cpu","8", "-appl", "Pfam", "-o", path_for_tmp+"domains_all.tsv"], stdout=fd, stderr=fd, check=True)
-        #get content of file "domains.tsv"
-        with open(path_for_tmp+"domains_all.tsv", "r") as f:
-            proteins = f.read()
-        return dict(content=proteins,filename="domains_"+value+".tsv")
+    else:
+        con = create_connection()
+        res = con.execute( """select t.transcript_id, d.domain, d.start, d.end 
+                              from transcripts t, domains d 
+                              where t.id=d.transcript and t.gene_name=?""", (value,) )
+
+        tsv = "transcript\tdomain\tstart\tend\n" 
+        tsv += "".join([ "%s\t%s\t%d\t%d\n" % row for row in res ])
+
+        #if n_clicks is not None and n_clicks>0:
+            # value = value.split(" ")[0]
+            # Run InterProScan on the protein file
+            #with open(path_for_tmp+'interproscan_alldomains.txt', 'w') as fd:
+                #subprocess.run(["../my_interproscan/interproscan-5.60-92.0/interproscan.sh", "-i", path_for_tmp+"proteins.fasta", "-f", "tsv", "--cpu","8", "-appl", "Pfam", "-o", path_for_tmp+"domains_all.tsv"], stdout=fd, stderr=fd, check=True)
+            #get content of file "domains.tsv"
+            #with open(path_for_tmp+"domains_all.tsv", "r") as f:
+                #proteins = f.read()
+        con.close()
+        return dict(content=tsv,filename="domains_"+value+".tsv")
 
 @app.callback(
     [Output('search-output-gene-id','data'), 
@@ -2175,21 +2178,19 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             print(transcripts)
             if transcripts.empty:
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None)
-            merged_df = pd.DataFrame()
             #get list of transcript_id from transcripts
             transcript_ids = transcripts["transcript_id"].to_list()
             # for gene_id in set(transcripts["gene_id"]):
             df_results = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
-            merged_df = merged_df.append(df_results)
             #generate heatmap with all tissues and transcripts
-            heatmap_rel = generate_heatmap(merged_df, True)
-            heatmap_abs = generate_heatmap(merged_df, False)
+            heatmap_rel = generate_heatmap(df_results, True)
+            heatmap_abs = generate_heatmap(df_results, False)
 
-            columns = [{"name": i, "id":i } for i in merged_df.columns]
-            data = merged_df.to_dict('records')
+            columns = [{"name": i, "id":i } for i in df_results.columns]
+            data = df_results.to_dict('records')
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(merged_df["transcript_id"])
+            start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"])
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel),b64_image(heatmap_abs))
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
@@ -2211,10 +2212,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None)
             print(transcripts)
             transcript_ids = transcripts["transcript_id"].to_list()
-            merged_df = pd.DataFrame(columns=['gene_id', 'gene_name', 'transcript_id', 'TPM(mean)A', 'TPM(mean)B'])
-            df_results = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
-            merged_df = merged_df.append(df_results)
-            df_result = calculate_percentage_for_TPM(merged_df)
+            df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
+            df_result = calculate_percentage_for_TPM(df_result)
             df_result = df_result.sort_values(by=['transcript_id'])
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
