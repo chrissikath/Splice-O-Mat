@@ -1,8 +1,3 @@
-
-
-
-
-
 # Adhesion GPCRs Transcript Variants Repository
 
 This repository contains the explanation and scripts for the paper: <br>
