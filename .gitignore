@@ -30,7 +30,7 @@ analysis/STARIndex/
 */_STARtmp/
 
 #exclude temp, tmp, cache and checkpoints
-*/__pycache__/*
+/__pycache__/
 */*.pyc
 */.cache/*
 */.RData
