@@ -1816,7 +1816,10 @@ def downloadDomains(n_clicks,value):
         return (no_update)
     else:
         con = create_connection()
-        res = con.execute( """select t.transcript_id, d.domain, d.start, d.end 
+        res = con.execute( """select t.transcript_id, d.domain, d.start, d.end,
+                                     (select sum(min(e.end,t.cds_start) - min(e.start,t.cds_start))
+                                      from exons e where e.transcript=t.id),
+                                     t.cds_start, t.cds_end
                               from transcripts t, domains d 
                               where t.id=d.transcript and t.gene_name=?""", (value,) )
 
@@ -1828,18 +1831,15 @@ def downloadDomains(n_clicks,value):
         # the position of the start codon in the same coordinate system, then
         # divide by three.  And then flip it around on the reverse strand.
 
-        for tid, dom, start, end in res:
-            # if this works, the queries should be combined into one XXX
-            s, e, gs, ge = find_longest_ORF(tid)
-
+        for tid, dom, start, end, cds_start, gs, ge in res:
             if gs<=ge:
-                eff_start = (start-s)/3
-                eff_end = (end-s)/3
+                eff_start = start-cds_start
+                eff_end = end-cds_start
             else:
-                eff_start = (e+1-end)/3
-                eff_end = (e+1-start)/3
+                eff_start = cds_start-end
+                eff_end = cds_start-start
 
-            tsv += "%s\t%s\t%d\t%d\n" % (tid, dom, eff_start, eff_end)
+            tsv += "%s\t%s\t%d\t%d\n" % (tid, dom, eff_start/3, eff_end/3)
 
         con.close()
         return dict(content=tsv,filename="domains_"+value+".tsv")
