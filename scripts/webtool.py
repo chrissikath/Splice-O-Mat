@@ -516,7 +516,7 @@ def get_cDNA_pos_of_each_exon(exons):
 
 def find_longest_ORF(transcript):
     """Find longest ORF of transcript_id "transcript" from database. 
-       Currently, the database layout works correctly only if all exons appears
+       Currently, the database layout works correctly only if all exons appear
        in syntheny.  start_pos and end_pos are the distances of the first and
        last base that are part of the longest ORF from the first base of the
        transcripts, counted on the forward strand of the exons; regardless of
@@ -1821,16 +1821,26 @@ def downloadDomains(n_clicks,value):
                               where t.id=d.transcript and t.gene_name=?""", (value,) )
 
         tsv = "transcript\tdomain\tstart\tend\n" 
-        tsv += "".join([ "%s\t%s\t%d\t%d\n" % row for row in res ])
 
-        #if n_clicks is not None and n_clicks>0:
-            # value = value.split(" ")[0]
-            # Run InterProScan on the protein file
-            #with open(path_for_tmp+'interproscan_alldomains.txt', 'w') as fd:
-                #subprocess.run(["../my_interproscan/interproscan-5.60-92.0/interproscan.sh", "-i", path_for_tmp+"proteins.fasta", "-f", "tsv", "--cpu","8", "-appl", "Pfam", "-o", path_for_tmp+"domains_all.tsv"], stdout=fd, stderr=fd, check=True)
-            #get content of file "domains.tsv"
-            #with open(path_for_tmp+"domains_all.tsv", "r") as f:
-                #proteins = f.read()
+        # At this point, we have coordinates for the domains in terms of
+        # offsets on the mRNA sequence, but on the forward strand of the
+        # genome.  To get (back) to protein coordinates, we need to subtract
+        # the position of the start codon in the same coordinate system, then
+        # divide by three.  And then flip it around on the reverse strand.
+
+        for tid, dom, start, end in res:
+            # if this works, the queries should be combined into one XXX
+            s, e, gs, ge = find_longest_ORF(tid)
+
+            if gs<=ge:
+                eff_start = (start-s)/3
+                eff_end = (end-s)/3
+            else:
+                eff_start = (e+1-end)/3
+                eff_end = (e+1-start)/3
+
+            tsv += "%s\t%s\t%d\t%d\n" % (tid, dom, eff_start, eff_end)
+
         con.close()
         return dict(content=tsv,filename="domains_"+value+".tsv")
 
