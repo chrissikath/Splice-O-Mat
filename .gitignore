@@ -1,14 +1,14 @@
-#exlude whole directories
+# Exclude directories
 data/
 my_interproscan/
-analysis/GSE*
-analysis/SRP*
-analysis/melanoma*
 stringtiedb/
-analysis/all_domains.tsv
 dist-newstyle/
+analysis/GSE*/
+analysis/SRP*/
+analysis/melanoma*/
+analysis/all_domains.tsv
 
-# exlude files
+# Exclude files
 *.fastq
 *.fastq.gz
 *.fasta
@@ -22,20 +22,19 @@ dist-newstyle/
 *tmp*
 *temp*
 
+# Exclude specific directories
 analysis/ballgown_version2/
 analysis/ballgown/
-
-#exclude STAR
 analysis/STARIndex/
-*/_STARtmp/
+_STARtmp/
+__pycache__/
+.cache/
+.ipynb_checkpoints/
 
-#exclude temp, tmp, cache and checkpoints
-*/__pycache__/
+# Exclude specific files
 *.pyc
-*/.cache/
 *.RData
 *.[oa]
 *~
 *.Rhistory
-*/.ipynb_checkpoints/
 *.log
