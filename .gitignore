@@ -11,7 +11,7 @@ dist-newstyle/
 # exlude files
 *.fastq
 *.fastq.gz
-*.fasta.*
+*.fasta
 *.gtf
 *.gff
 *.bam
