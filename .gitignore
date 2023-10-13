@@ -1,13 +1,12 @@
 #exlude whole directories
 data/
 my_interproscan/
-/analysis/GSE*
-/analysis/SRP*
-/analysis/melanoma*
-/stringtiedb/
-/analysis/proteins.fasta
-/analysis/all_domains.tsv
-/dist-newstyle
+analysis/GSE*
+analysis/SRP*
+analysis/melanoma*
+stringtiedb/
+analysis/all_domains.tsv
+dist-newstyle/
 
 # exlude files
 *.fastq
@@ -31,12 +30,13 @@ analysis/STARIndex/
 */_STARtmp/
 
 #exclude temp, tmp, cache and checkpoints
-*/tmp/
 */__pycache__/*
 */*.pyc
 */.cache/*
 */.RData
 *.RData
+*.[oa]
+*~
 *.Rhistory
 */.ipynb_checkpoints/*
 */*.log
