@@ -30,13 +30,13 @@ analysis/STARIndex/
 */_STARtmp/
 
 #exclude temp, tmp, cache and checkpoints
-/__pycache__/
+*/__pycache__/
 */*.pyc
-*/.cache/*
+*/.cache/
 */.RData
 *.RData
 *.[oa]
 *~
 *.Rhistory
-*/.ipynb_checkpoints/*
+*/.ipynb_checkpoints/
 */*.log
