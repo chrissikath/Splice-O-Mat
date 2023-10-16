@@ -432,7 +432,7 @@ def plot_heatmap(tpms, transcripts, output_path, relative=True):
 
     plt.figure(figsize=(40, 30))
     sns.set(font_scale=2.5)
-    sns.heatmap(tpms, cbar=True)
+    sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1)
 
     if relative:
         plt.title('TPM (% across tissue)')
