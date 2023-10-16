@@ -2452,8 +2452,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 df_result = calculate_percentage_for_TPM(merged_df)
                 #sort df_result by transcript_id
                 df_result = df_result.sort_values(by=['transcript_id'])
-                generate_heatmap(result_df, True)
-                generate_heatmap(result_df, False)
+                generate_heatmap(df_result, True)
+                generate_heatmap(df_result, False)
                 columns = [{"name": i, "id":i } for i in df_result.columns]
                 data = df_result.to_dict('records')
                         
@@ -2521,8 +2521,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             df_result = df_result.sort_values(by=['transcript_id'])
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
-            generate_heatmap(result_df, True)
-            generate_heatmap(result_df, False)
+            generate_heatmap(df_result, True)
+            generate_heatmap(df_result, False)
             if (mutation!=None) and (mutation!=""):
                 start_result, stop_results, chrom_results, strand_results = generate_svg(df_result["transcript_id"] ,mutation)
             else:
