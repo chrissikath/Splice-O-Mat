@@ -652,7 +652,7 @@ def get_cDNA_from_gene_id(ref_gene_id):
     else:
         df.columns = ["gene_id","transcript_id"]
         #get all transcipt_ids from df
-        transcripts = df["transcript_id"].tolist()
+        transcripts = df["transcript_id"]
         #get cDNA of transcripts
         cDNA = get_cDNA(transcripts)
         con.close()
@@ -795,7 +795,7 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
             AND s.tissue = ? \
             GROUP BY t.gene_id, t.gene_name, t.transcript_id;"
         # statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
-        res = cur.execute(statement, transcripts + [tissue])
+        res = cur.execute(statement, [ t for t in transcripts ] + [tissue])
         df_A = pd.DataFrame(res.fetchall())
         df_A.columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
 
@@ -1603,7 +1603,7 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
         raise exceptions.PreventUpdate
                        
     #save second column from df_result as a list of transcript_ids
-    transcript_ids = df_result.iloc[:,1].tolist()
+    transcript_ids = df_result.iloc[:,1]
 
     cur = con.cursor()
     df_final = [] 
@@ -2070,7 +2070,6 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         exceptions.PreventUpdate: _description_
 
     Returns:
-        (data, columns, b64_svg("Gene.svg"),'', start, stop, chrom, strand, None, b64_image("heatmap_relatives.png")) : 
         data, columns, svg, warning, start, stop, chrom, strand, mutation, heatmap_relatives, heatmap_absolutes
     """
     # either dropdown or start, stop, chrom als input 
@@ -2127,7 +2126,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 statement_get_all_transcripts_from_ref_gene_id = "SELECT DISTINCT t2.gene_name, t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
                 res = cur.execute(statement_get_all_transcripts_from_ref_gene_id, [input_value])
                 df = pd.DataFrame(res.fetchall())
-                transcripts = df[2].to_list()
+                transcripts = df[2]
                 df.columns = ["gene_name","gene_id","transcript_id"]
                 #sort df by transcript_id
                 df = df.sort_values(by=['transcript_id'])
@@ -2187,9 +2186,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             print(transcripts)
             if transcripts.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None)
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, None)
             #get list of transcript_id from transcripts
-            transcript_ids = transcripts["transcript_id"].to_list()
+            transcript_ids = transcripts["transcript_id"]
             # for gene_id in set(transcripts["gene_id"]):
             df_results = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
             #generate heatmap with all tissues and transcripts
@@ -2207,21 +2206,21 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             print("--no groups selected--")
             df_result = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if df_result.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand,mutation)
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand,mutation, None,None)
             #sort df_result by transcript_id
             df_result = df_result.sort_values(by=['transcript_id'])
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
                     
-            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None)    
+            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, None)
         else:
             print("--groups selected--")
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if transcripts.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None)
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, None)
             print(transcripts)
-            transcript_ids = transcripts["transcript_id"].to_list()
+            transcript_ids = transcripts["transcript_id"]
             df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
             df_result = calculate_percentage_for_TPM(df_result)
             df_result = df_result.sort_values(by=['transcript_id'])
