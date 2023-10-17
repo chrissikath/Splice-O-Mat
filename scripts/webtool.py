@@ -480,7 +480,9 @@ def generate_svg(transcripts, position_mut=None):
         d.add(domain_name)
 
     #draw mutation position in svg
+    print(position_mut)
     if position_mut!=None and position_mut!='':
+        print(position_mut)
         positions_mut =  position_mut.split(",")
         for pos in positions_mut:
             mutation_position = ((absolut-(end_genomic_region_of_transcript-int(int(pos))))*size)//(absolut)
@@ -2103,7 +2105,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_abs = generate_heatmap(result_df, False)
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"])
+            start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"], mutation)
 
             number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
             #add new row with NONE in every column except "# of exons" == number_inner_exons
@@ -2174,7 +2176,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                         
                 con.close()
                 print("Average TPM calcuated")
-                start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"])
+                start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
                 return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
         
         
@@ -2199,7 +2201,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             data = df_results.to_dict('records')
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"])
+            start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel),b64_image(heatmap_abs))
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
@@ -2228,7 +2230,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             data = df_result.to_dict('records')
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
-            start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"] ,mutation)
+            start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel), b64_image(heatmap_abs))
     
         
