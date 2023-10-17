@@ -31,7 +31,7 @@ import json
 ####### configuration #######
 database_file = "/var/cache/stringtie.db"
 genome_file = "/var/cache/GRCh38.2bit"
-url_base_pathname = "/Splice-O-Mat-Exp/"
+url_base_pathname = "/Splice-O-Mat/"
 
 ####### helper functions #######
 class StdevFunc:
