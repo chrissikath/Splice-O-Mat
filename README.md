@@ -166,6 +166,10 @@ Do you have any questions, suggestions about the webtool or the analysis please 
 
 ---
 ## ToDos:
+- 'gene_name' benutzt anstatt 'gene_id' benutzen
+- mitochondriale Gene löschen
+- Reinzoomen
+- alle Domänen anzeigen
 - responsive
 - an eine SNP Datenbank anknüpfen
 - Svg flippen
