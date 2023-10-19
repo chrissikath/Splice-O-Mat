@@ -100,6 +100,7 @@ cat ${SAMPLE_LIST} | cut -f2 | sed 's/\r$//' | while read sample; do
 	done; 
 
 ############################ 2.1 Stingtie ######################################
+# you might want to skip mitochondiral genes, this can be done with -x chrM
 echo 'stringtie';
 cat ${SAMPLE_LIST} | cut -f2 | sed 's/\r$//' | while read sample; do 
 	echo $sample `date +%T`;
