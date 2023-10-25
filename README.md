@@ -166,17 +166,17 @@ Do you have any questions, suggestions about the webtool or the analysis please 
 
 ---
 ## ToDos:
-[] 'gene_name' benutzt anstatt 'gene_id' benutzen
-[x] mitochondriale Gene löschen
-[] Reinzoomen
-[] alle Domänen anzeigen
-[] responsive
-[] an eine SNP Datenbank anknüpfen
-[] Svg flippen
-[] Eigene Domänen eintragen
-- Mutation labeln können (rs Code)
-- Eigene Daten einspeißen (pipeline, datenbank etc)
+- [ ] 'gene_name' benutzt anstatt 'gene_id' benutzen
+- [X] mitochondriale Gene löschen
+- [ ] Reinzoomen
+- [ ] alle Domänen anzeigen
+- [ ] responsive
+- [ ] an eine SNP Datenbank anknüpfen
+- [ ] Svg flippen
+- [ ] Eigene Domänen eintragen
+- [ ]  Mutation labeln können (rs Code)
+- [ ] Eigene Daten einspeißen (pipeline, datenbank etc)
   - müssen deep sequenced sein, paired-end, datenbank local speichern?
-- gene_id entfernen, stattdessen gene_name
+- [ ] gene_id entfernen, stattdessen gene_name
 
 [Back to the top](#top)
