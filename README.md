@@ -1,8 +1,8 @@
 # Adhesion GPCRs Transcript Variants Repository
 
 This repository contains all informations and scripts for the paper: <br>
-This includes preprocessing of the datasets (under analysis), the scripts for the webtool (under scripts), and additional analysis for the manuscript (under analysis). 
-[![DOI](https://zenodo.org/badge/696187476.svg)](https://zenodo.org/badge/latestdoi/696187476)  <br>
+[![DOI](https://zenodo.org/badge/696187476.svg)](https://zenodo.org/badge/latestdoi/696187476) <br>
+This includes preprocessing of the datasets (under analysis), the scripts for the webtool (under scripts), and additional analysis for the manuscript (under analysis).  <br>
 **The repertoire and structure of adhesion GPCR transcripts assembled from deep-sequenced human samples.** <br>
 **Christina Katharina Kuhn, Udo Stenzel, Sandra Berndt, Ines Liebscher, Torsten Schöneberg, Susanne Horn** <br>
 Under Review at Nuclar Acid Research (NAC) <br> 
