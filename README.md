@@ -1,4 +1,4 @@
-# Adhesion GPCRs Transcript Variants Repository
+# Splice-O-Mat and adhesion GPCRs transcript variants
 
 This repository contains all informations and scripts for the paper: <br>
 [![DOI](https://zenodo.org/badge/696187476.svg)](https://zenodo.org/badge/latestdoi/696187476) <br>
