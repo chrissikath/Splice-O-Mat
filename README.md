@@ -2,12 +2,11 @@
 
 This repository contains all informations and scripts for the paper: <br>
 [![DOI](https://zenodo.org/badge/696187476.svg)](https://zenodo.org/badge/latestdoi/696187476) <br>
-This includes preprocessing of the datasets (under analysis), the scripts for the webtool (under scripts), and additional analysis for the manuscript (under analysis).  <br>
 **The repertoire and structure of adhesion GPCR transcripts assembled from deep-sequenced human samples.** <br>
 **Christina Katharina Kuhn, Udo Stenzel, Sandra Berndt, Ines Liebscher, Torsten Schöneberg, Susanne Horn** <br>
 Under Review at Nuclar Acid Research (NAC) <br> 
 
-
+This includes preprocessing of the datasets (under analysis), the scripts for the webtool (under scripts), and additional analysis for the manuscript (under analysis).  <br>
 
 ## Table of Contents
 - [Objective](#objective)
@@ -129,6 +128,10 @@ All files are within directory `analysis/`
 
 Other necessary files:
 - ../analysis/hg38.fna
+
+Additional analysis in the manuscript: 
+- ../analysis/compare_CLSR1_with_genocode_and_diagostics/: Comparison with diagnostic exome sequencing of CELSR1/ADGRC1
+- ../analysis/tissue_specific_splicing/: Spearman and violin plot of tissue-specific splicing
 
 ## Results 
 Inside the `analysis/` directory, you will find the following directories for each dataset:
