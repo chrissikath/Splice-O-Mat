@@ -391,6 +391,7 @@ def generate_svg(transcripts, position_mut=None):
 
     d.add(svgwrite.text.Text("presented genes (start of first exon, end of latest exon): "+resulting_string, \
                                 insert=(x_start, y_start+80), style="font-size:24"))
+
     x_start = 0 
     y_start = y_start+100 
 
@@ -401,6 +402,15 @@ def generate_svg(transcripts, position_mut=None):
     d.add(genomic_region)
     d.add(start)
     d.add(end)
+
+    # for gene_name, values in sorted(gene_names.items()):
+    #     print(gene_name, values)
+    #     gene_position_start = ((absolut-(end_genomic_region_of_transcript-(values[0])))*size)//(absolut)
+    #     gene_position_end = ((absolut-(end_genomic_region_of_transcript-(values[1])))*size)//(absolut)
+    #     gene_name_on_genome =  svgwrite.text.Text(str(gene_name), insert=(40+((gene_position_end-gene_position_start)/2), y_start+10), style="font-size:24")
+    #     gene_location_on_genome = svgwrite.shapes.Rect(insert=(40+((gene_position_start)), y_start+20), size=(2,200), fill='#bc5090')
+    #     d.add(gene_name_on_genome)
+    #     d.add(gene_location_on_genome)
 
     y_start = y_start+20
     
@@ -480,10 +490,8 @@ def generate_svg(transcripts, position_mut=None):
         d.add(domain_name)
 
     #draw mutation position in svg
-    print(position_mut)
     if position_mut!=None and position_mut!='':
-        print(position_mut)
-        positions_mut =  position_mut.split(",")
+        positions_mut = position_mut.split(",")
         for pos in positions_mut:
             mutation_position = ((absolut-(end_genomic_region_of_transcript-int(int(pos))))*size)//(absolut)
             mutation = svgwrite.shapes.Rect(insert=(40+mutation_position, y_start), size=(1,y+20-y_start), fill='#bc5090')
@@ -1244,9 +1252,9 @@ card1 = dbc.Card([
     dbc.CardHeader("Select Transcripts by Gene Name"),
     dbc.CardBody([
         html.H4('Step 2: Discover transcripts of a gene',style={'color':'dark blue'}),
-        html.H6("The user can select a gene (based on the annotation of the UCSC hg38 human genome).\
+        html.H6("The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
             The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_id) \
-                including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTR) of the selected gene. \
+                including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTR, not already annotated in the NCBI annotation) of the selected gene. \
                     NSTRG's were assigned gene_names derived from those annotated transcripts that they overlapped with the most. \
                         This was done counting overlapping exonic bases."),
         html.Br(),
@@ -1371,7 +1379,7 @@ card_1a = dbc.Card([
         dbc.Row([
             html.Br(),
             html.H4('Show transcripts that overlap genomic region'),
-            html.H6("The user can specify a region (chromosome, start [bp], stop [bp], strand; annotation used: UCSC hg38 human genome). The output table shows all transcripts that have an exon overlapping this region (see figure)."),
+            html.H6("The user can specify a region (chromosome, start [bp], stop [bp], strand; annotation used: NCBI hg38 human genome). The output table shows all transcripts that have an exon overlapping this region (see figure)."),
         ]),
         dbc.Row([
             html.Div(html.Img(src=app.get_asset_url('AbbildungExon.png'), alt='image', style={'width':'20%'})),
@@ -1494,7 +1502,7 @@ card4 = dbc.Card([
     dbc.CardHeader("Info"),
     dbc.CardBody([          
         html.P("We obtained three brain tissue dataset (GSE173955, GSE182321, GSE101521), one liver tissue dataset (GSE174478), one heart tissue dataset (GSE165303), one kidney tissue dataset (GSE217427) and one dataset including 45 different tissues types (GSE138734) from the Gene Expression Omnibus (GEO) public dataset. We further obtained one melanoma cancer dataset (PRJEB23709) from the European Nucleotide Archive. Only paired-end RNA-seq samples were included and datasets generated without random primers were excluded. The raw data was mapped against the hg38 human genome using STAR (version 2.7.6a) with default parameters. After indexing with samtools (version 1.9) the mapped reads were assembled to transcripts and quantified by StringTie (version v2.1.3b). StringTie parameters ‘read coverage’ (-c), ‘transcript length’ (-m) and ‘bases on both sides of a junction a spliced read has to cover’ (-a) were set to minimal values in order to avoid missing transcripts and generating a bias. The parameter ‘fraction of most abundant transcript at one locus’ (-f) was lowered from default (0.01) to 0. For all other StringTie parameters default values were used. To generate a global, unified set of transcripts across all three RNA-Seq samples, StringTie merge mode with providing the reference annotation (-G) was used. Quantification of abundance of the input transcripts was then performed using parameters ‘expression estimation mode’ (-e) with parameters ‘ballgown output’ (-B) and the beforehand generated ‘reference annotation transcripts’ (-G)."),
-        html.P("Annotated transcripts are labeled with their RefSeq accessions: NM = Protein-coding transcripts (usually curated), NR = Non-protein-coding transcripts, XM = Predicted model protein-coding transcript, XR = Predicted model non-protein-coding transcript. Potential new transcripts assigned by Stringtie are annotated with 'NSTR'"),
+        html.P("Annotated transcripts are labeled with their RefSeq accessions: NM = Protein-coding transcripts (usually curated), NR = Non-protein-coding transcripts, XM = Predicted model protein-coding transcript, XR = Predicted model non-protein-coding transcript. Potential new transcripts assigned by Stringtie (not in the NCBI hg38 genome annotation) are annotated with 'NSTR'"),
         html.P("The webtool was created by Christina Kuhn. For questions and suggestions please contact christina.kuhn@medizin.uni-leipzig.de")
     ]),
 ])
