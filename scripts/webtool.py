@@ -2,7 +2,7 @@
 # Date: 2022-03-10
 # Description: webtool for splice-o-mat, which is a tool to visualize splice-variants 
 #               from RNA-seq data and compare them in different samples and tissues
-#              the webtool is hosted at https://tools.hornlab.org/TaVaAn/
+#              the webtool is hosted at https://tools.hornlab.org/Splice-O-Mat/
 # Use Case: GPCR analysis as in the paper from 10.1038/s41598-019-46265-x.
 
 ################## 0.0 Import Modules ############################
@@ -620,15 +620,15 @@ def get_proteins(ref_gene_id):
         for transcript in cDNA_dict:
             print("transcript: %s" % transcript)
             cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
-            print("cDNA_string: %s" % cDNA_Seq)
+            # print("cDNA_string: %s" % cDNA_Seq)
             start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
 
             print("--ORF from %d to %d--" % (start_genome, end_genome))
             if start_genome<=end_genome:
                 proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
             else:
-                s = cDNA_Seq.length() - end_pos+1
-                e = cDNA_Seq.length() - start_pos
+                s = len(cDNA_Seq) - end_pos+1
+                e = len(cDNA_Seq) - start_pos
                 proteins[transcript] = cDNA_Seq[s:e].translate()
         return proteins
 
@@ -767,8 +767,18 @@ def get_TPM_from_tissues(gene_id, tissues):
         end.append(last_exon_stop)
         number_exons.append(number_of_exon)
 
+    # TODO: insert protein length of predicted protein after UDO fixed protein (- strand) problem
+    print(df_result["gene_name"][0])
+    # predicted_proteins = get_proteins(df_result["gene_name"][0])
+    # print(predicted_proteins)
+    #for each key in dict get the length of the proteins which is coded as the length of the Seq object
+    length_protein = []
+    # for transcripts_id in predicted_proteins:
+    #     length_protein.append(len(predicted_proteins[transcripts_id]))
+    # print(length_protein)
     #insert value at column 1
-    df_result.insert(3, "length (bp)", length_transcript)
+    df_result.insert(3, "length transcript (bp)", length_transcript)
+    # df_result.insert(4, "length predicted protein (as)", length_protein)
     df_result.insert(4, "start", start)
     df_result.insert(5, "end", end)
     df_result.insert(6, "# of exons", number_exons)
@@ -1111,7 +1121,7 @@ ref_gene_names, tissues_and_samples, tissues = fill_dropdowns_in_dash_applicatio
 #APP Layout
 # the app has 4 cards to far
 card_explanation = dbc.Card([
-    dbc.CardHeader("Explanation"),
+    dbc.CardHeader("How-to-use"),
     dbc.CardBody([
         dbc.Row([
             dbc.Col([
@@ -1121,7 +1131,7 @@ card_explanation = dbc.Card([
                 html.H6("How to use the app: "),
                 html.P(["The app is divided into 2 steps", 
                         html.Br(), 
-                        " Step 1: Select Tissue/Samples for group comparison or across all tissues", 
+                        " Step 1: Select Tissue/Samples for group comparison or across all tissues",
                         html.Br(),
                         " Step 2: Select Gene for visualization and analysis of transcripts"]),
             ], width=6),
@@ -1177,6 +1187,9 @@ card_explanation = dbc.Card([
     ])
 ])
 
+popover_step1_option1_explanations = "The user can select from tissue types (e.g. liver, brain...) or all tissues at once 'Across all tissues'."
+popover_step1_option2_explanations  = "The user can select one or more samples (SRA...) or tissue types (e.g. liver, brain) for group comparisons (group A vs. group B)."
+
 card0 = dbc.Card([
     dbc.CardHeader("Select Tissues"),
     dbc.CardBody([
@@ -1185,7 +1198,20 @@ card0 = dbc.Card([
             dbc.Col([
                 html.Br(),
                 html.H6('Option 1: Across all/specific samples:',style={'color':'dark blue'}),
-                html.H6("The user can select from tissue types (e.g. liver, brain...) or all tissues at once 'Across all tissues'."),
+                dbc.Button(
+                    "Info",
+                    id="hover-target-option1",
+                    color="info",
+                    className="me-1",
+                    n_clicks=0,
+                ),
+                dbc.Popover(
+                    popover_step1_option1_explanations,
+                    target="hover-target-option1",
+                    body=True,
+                    trigger="hover"),
+                html.Br(),
+                html.Br(),
                 dbc.Row([
                     dbc.Col([
                         dcc.Dropdown(
@@ -1212,26 +1238,39 @@ card0 = dbc.Card([
             dbc.Col([
                 html.Br(),
                 html.H6('Option 2: Group Comparison (A vs. B):',style={'color':'dark blue'}),
-                html.H6("The user can select one or more samples (SRA...) or tissue types (e.g. liver, brain) for group comparisons (group A vs. group B)."),
+                dbc.Button(
+                    "Info",
+                    id="hover-target-option2",
+                    color="info",
+                    className="me-1",
+                    n_clicks=0,
+                ),
+                dbc.Popover(
+                    popover_step1_option2_explanations,
+                    target="hover-target-option2",
+                    body=True,
+                    trigger="hover"),
+                html.Br(),
+                html.Br(),
                 dbc.Row([
-            dbc.Col([
-                dbc.Label('Group A'),
-                dcc.Dropdown(
-                    options=tissues_and_samples,
-                    id='group-comparisonA', multi=True),
-                html.Br(),
-                dbc.Label('Chosen group A'),
-                html.P("none",id='groupA',style={'color':'blue'}),
-            ]),
-            dbc.Col([
-                dbc.Label('Group B'),
-                dcc.Dropdown(
-                    options=tissues_and_samples,
-                    id='group-comparisonB', multi=True),
-                html.Br(),
-                dbc.Label('Chosen group B'),
-                html.P("none",id='groupB',style={'color':'blue'}),
-            ]), 
+                    dbc.Col([
+                        dbc.Label('Group A'),
+                        dcc.Dropdown(
+                            options=tissues_and_samples,
+                            id='group-comparisonA', multi=True),
+                        html.Br(),
+                        dbc.Label('Chosen group A'),
+                        html.P("none",id='groupA',style={'color':'blue'}),
+                    ]),
+                    dbc.Col([
+                        dbc.Label('Group B'),
+                        dcc.Dropdown(
+                            options=tissues_and_samples,
+                            id='group-comparisonB', multi=True),
+                        html.Br(),
+                        dbc.Label('Chosen group B'),
+                        html.P("none",id='groupB',style={'color':'blue'}),
+                    ]), 
         ]),
         dbc.Row([
             dbc.Col([
@@ -1247,16 +1286,31 @@ card0 = dbc.Card([
       ])
 ])
 
+popover_step2_explanations = "The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
+    The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_id) \
+    including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTR, not already annotated in the NCBI annotation) of the selected gene. \
+    NSTRG's were assigned gene_names derived from those annotated transcripts that they overlapped with the most. \
+    This was done counting overlapping exonic bases."
+
+
 # card1
 card1 = dbc.Card([
     dbc.CardHeader("Select Transcripts by Gene Name"),
     dbc.CardBody([
         html.H4('Step 2: Discover transcripts of a gene',style={'color':'dark blue'}),
-        html.H6("The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
-            The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_id) \
-                including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTR, not already annotated in the NCBI annotation) of the selected gene. \
-                    NSTRG's were assigned gene_names derived from those annotated transcripts that they overlapped with the most. \
-                        This was done counting overlapping exonic bases."),
+        dbc.Button(
+            "Info",
+            id="hover-target-step2",
+            color="info",
+            className="me-1",
+            n_clicks=0,
+        ),
+        dbc.Popover(
+            popover_step2_explanations,
+            target="hover-target-step2",
+            body=True,
+            trigger="hover"),
+        html.Br(),
         html.Br(),
         dbc.Row([
             dbc.Col([
@@ -1356,14 +1410,29 @@ card1 = dbc.Card([
     ])
 ])
 
+popover_gene_id_explanations = "The user can enter a gene_id. The output table shows all transcripts assigned to this gene_id."
+popover_transcripts_by_region= "The user can specify a region (chromosome, start [bp], stop [bp], strand; annotation used: NCBI hg38 human genome). The output table shows all transcripts that have an exon overlapping this region (see figure)."
+
 card_1a = dbc.Card([
     dbc.CardHeader("Search Transcripts by Gene ID or Genomic Region"),
     dbc.CardBody([
         dbc.Row([
             html.H4('Show transcripts by gene_id'),
-            html.H6('The user can select a gene_id. The output table shows all transcripts assigned to this gene_id.'),
-
         ]),
+        dbc.Button(
+                    "Info",
+                    id="hover-target-gene-id",
+                    color="info",
+                    className="me-1",
+                    n_clicks=0,
+                ),
+                dbc.Popover(
+                    popover_gene_id_explanations,
+                    target="hover-target-gene-id",
+                    body=True,
+                    trigger="hover"),
+        html.Br(),
+        html.Br(),
         dbc.Row([
             dbc.Col([dbc.Input(type="text", id='gene-id',  placeholder='NSTRG.8029'),], width=6),
             dbc.Col([html.P(id='gene-id-err',style={'color':'red'}),], width=6),
@@ -1376,11 +1445,25 @@ card_1a = dbc.Card([
                 dash_table.DataTable(id='search-output-gene-id',columns=[],data=[], export_format="csv"),
             ]),
         ]),
+        html.Br(),
         dbc.Row([
             html.Br(),
             html.H4('Show transcripts that overlap genomic region'),
-            html.H6("The user can specify a region (chromosome, start [bp], stop [bp], strand; annotation used: NCBI hg38 human genome). The output table shows all transcripts that have an exon overlapping this region (see figure)."),
         ]),
+        dbc.Button(
+                    "Info",
+                    id="hover-target-region",
+                    color="info",
+                    className="me-1",
+                    n_clicks=0,
+                ),
+                dbc.Popover(
+                    popover_transcripts_by_region,
+                    target="hover-target-region",
+                    body=True,
+                    trigger="hover"),
+        html.Br(),
+        html.Br(),
         dbc.Row([
             html.Div(html.Img(src=app.get_asset_url('AbbildungExon.png'), alt='image', style={'width':'20%'})),
             html.Br(),
@@ -1429,14 +1512,30 @@ card_1a = dbc.Card([
         ]),
     ])
 ])
+
+popover_exon_structure_explanations = "The user can select a specific transcript based on the transcript_id (e.g. NSTRG.8029.1, NTRG.8029.2, NM_001291085.1). The output table will show the exons of this transcript with start and end coordinates to be used e.g. in the genome browser (hg38)."
+
 #card 2
 card2 = dbc.Card([
     dbc.CardHeader("Exon structure"),
     dbc.CardBody([
         dbc.Row([
             html.H4('Get exon structure of specific transcript'),
-            html.H6("The user can select a specific transcript based on the transcript_id (e.g. NSTRG.8029.1, NTRG.8029.2, NM_001291085.1). The output table will show the exons of this transcript with start and end coordinates to be used e.g. in the genome browser (hg38)."),
         ]),
+        dbc.Button(
+                    "Info",
+                    id="hover-target-exon-structure",
+                    color="info",
+                    className="me-1",
+                    n_clicks=0,
+                ),
+                dbc.Popover(
+                    popover_exon_structure_explanations,
+                    target="hover-target-exon-structure",
+                    body=True,
+                    trigger="hover"),
+        html.Br(),
+        html.Br(),
         dbc.Row([
             dbc.Col([
                 dbc.Input(type="text", id='transcript-id', placeholder='NSTRG.8029.1',), 
@@ -1456,14 +1555,30 @@ card2 = dbc.Card([
         ]),
       ]),
 ])
+
+popover_sql_statement = "The user can make custom SQL queries to the database according to the structure of the database in the given entity-relationship model."
+
 #card 3
 card3 = dbc.Card([
     dbc.CardHeader("SQL statement:"),
     dbc.CardBody([  
         dbc.Row([
             html.H4('Execute SQL statement'),
-            html.H6("The user can make custom SQL queries to the database according to the structure of the database in the following entity-relationship model."),
         ]),
+        dbc.Button(
+                    "Info",
+                    id="hover-target-sql",
+                    color="info",
+                    className="me-1",
+                    n_clicks=0,
+                ),
+                dbc.Popover(
+                    popover_sql_statement,
+                    target="hover-target-sql",
+                    body=True,
+                    trigger="hover"),
+        html.Br(),
+        html.Br(),
         dbc.Row([
             dbc.Col([html.Div(html.Img(src=app.get_asset_url('Stringtie_2.db.png'), alt='image', style={'width':'100%'}))],width=6),
         ]),
