@@ -1190,100 +1190,159 @@ card_explanation = dbc.Card([
 popover_step1_option1_explanations = "The user can select from tissue types (e.g. liver, brain...) or all tissues at once 'Across all tissues'."
 popover_step1_option2_explanations  = "The user can select one or more samples (SRA...) or tissue types (e.g. liver, brain) for group comparisons (group A vs. group B)."
 
+tab1_content_sample_selection = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H4('Step 1: Sample selection', style={'color': 'dark blue'}),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.Br(),
+                            html.H6('Option 1: Across all/specific samples:', style={'color': 'dark blue'}),
+                            dbc.Button(
+                                "Info",
+                                id="hover-target-option1",
+                                color="info",
+                                className="me-1",
+                                n_clicks=0,
+                            ),
+                            dbc.Popover(
+                                popover_step1_option1_explanations,
+                                target="hover-target-option1",
+                                body=True,
+                                trigger="hover"
+                            ),
+                            html.Br(),
+                            html.Br(),
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        [
+                                            dcc.Dropdown(
+                                                options=tissues,
+                                                id='all-tissues-dropdown',
+                                                multi=True
+                                            ),
+                                        ], width=8
+                                    ),
+                                    dbc.Col(
+                                        [
+                                            dbc.Button('Across all tissues', color="primary", id='all-tissues-button',
+                                                       n_clicks=0),
+                                        ], width=4
+                                    ),
+                                ]
+                            ),
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        [
+                                            html.Br(),
+                                            dbc.Button("Download TPM without mean", id="btn-download-without-groups",
+                                                       n_clicks=0,
+                                                       style={
+                                                           'background-color': 'rgba(211, 211, 211, 0.6)',
+                                                           'border-color': 'rgba(211, 211, 211, 0.6)',
+                                                           'color': 'grey'}
+                                                       ),
+                                            dcc.Download(id="download-without-groups"),
+                                        ], width=6
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
+                ]
+            ),
+            dbc.Row([html.Br()]),
+        ]
+    ),
+    className="mt-3",
+)
+
+
+tab2_content_sample_selection = dbc.Card(
+    [
+        dbc.CardBody(
+            [
+                html.H4('Step 1: Sample selection', style={'color': 'dark blue'}),
+                dbc.Col(
+                    [
+                        html.Br(),
+                        html.H6('Option 2: Group Comparison (A vs. B):', style={'color': 'dark blue'}),
+                        dbc.Button(
+                            "Info",
+                            id="hover-target-option2",
+                            color="info",
+                            className="me-1",
+                            n_clicks=0,
+                        ),
+                        dbc.Popover(
+                            popover_step1_option2_explanations,
+                            target="hover-target-option2",
+                            body=True,
+                            trigger="hover"
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        dbc.Label('Group A'),
+                                        dcc.Dropdown(
+                                            options=tissues_and_samples,
+                                            id='group-comparisonA',
+                                            multi=True
+                                        ),
+                                        html.Br(),
+                                        dbc.Label('Chosen group A'),
+                                        html.P("none", id='groupA', style={'color': 'blue'}),
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label('Group B'),
+                                        dcc.Dropdown(
+                                            options=tissues_and_samples,
+                                            id='group-comparisonB',
+                                            multi=True
+                                        ),
+                                        html.Br(),
+                                        dbc.Label('Chosen group B'),
+                                        html.P("none", id='groupB', style={'color': 'blue'}),
+                                    ]
+                                ),
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        dbc.Button('Select Groups', id='group-button', n_clicks=0),
+                                        html.Br(),
+                                    ]
+                                ),
+                            ]
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        dbc.Row([html.Br()]),
+    ],
+    className="mt-3",
+)
+
 card0 = dbc.Card([
     dbc.CardHeader("Select Tissues"),
-    dbc.CardBody([
-        html.H4('Step 1: Sample selection',style={'color':'dark blue'}),
-        dbc.Row([
-            dbc.Col([
-                html.Br(),
-                html.H6('Option 1: Across all/specific samples:',style={'color':'dark blue'}),
-                dbc.Button(
-                    "Info",
-                    id="hover-target-option1",
-                    color="info",
-                    className="me-1",
-                    n_clicks=0,
-                ),
-                dbc.Popover(
-                    popover_step1_option1_explanations,
-                    target="hover-target-option1",
-                    body=True,
-                    trigger="hover"),
-                html.Br(),
-                html.Br(),
-                dbc.Row([
-                    dbc.Col([
-                        dcc.Dropdown(
-                            options=tissues,
-                            id='all-tissues-dropdown', multi=True),
-                    ], width=8),
-                    dbc.Col([
-                        dbc.Button('Across all tissues', color="primary", id='all-tissues-button', n_clicks=0),
-                    ], width=4),
-                ]),
-                dbc.Row([
-                    dbc.Col([
-                        html.Br(),
-                        dbc.Button("Download TPM without mean", id="btn-download-without-groups", n_clicks=0, 
-                                    style={
-                                            'background-color': 'rgba(211, 211, 211, 0.6)',
-                                            'border-color': 'rgba(211, 211, 211, 0.6)',
-                                            'color': 'grey'}
-                                    ), 
-                        dcc.Download(id="download-without-groups"),
-                    ], width=6)
-                ])
-            ]),
-            dbc.Col([
-                html.Br(),
-                html.H6('Option 2: Group Comparison (A vs. B):',style={'color':'dark blue'}),
-                dbc.Button(
-                    "Info",
-                    id="hover-target-option2",
-                    color="info",
-                    className="me-1",
-                    n_clicks=0,
-                ),
-                dbc.Popover(
-                    popover_step1_option2_explanations,
-                    target="hover-target-option2",
-                    body=True,
-                    trigger="hover"),
-                html.Br(),
-                html.Br(),
-                dbc.Row([
-                    dbc.Col([
-                        dbc.Label('Group A'),
-                        dcc.Dropdown(
-                            options=tissues_and_samples,
-                            id='group-comparisonA', multi=True),
-                        html.Br(),
-                        dbc.Label('Chosen group A'),
-                        html.P("none",id='groupA',style={'color':'blue'}),
-                    ]),
-                    dbc.Col([
-                        dbc.Label('Group B'),
-                        dcc.Dropdown(
-                            options=tissues_and_samples,
-                            id='group-comparisonB', multi=True),
-                        html.Br(),
-                        dbc.Label('Chosen group B'),
-                        html.P("none",id='groupB',style={'color':'blue'}),
-                    ]), 
-        ]),
-        dbc.Row([
-            dbc.Col([
-                dbc.Button('Select Groups', id='group-button', n_clicks=0),
-                html.Br(),
-            ]),
-        ]),
-            ]),
-        ]),
-        dbc.Row([
-            html.Br(),
-        ]),
-      ])
+    dbc.Tabs(
+                [
+                    dbc.Tab(tab1_content_sample_selection, label="Option 1: Across all tissues/samples"),
+                    dbc.Tab(tab2_content_sample_selection, label="Option 2: Group comparisons"),
+                ]
+            ),
 ])
 
 popover_step2_explanations = "The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
@@ -1413,104 +1472,122 @@ card1 = dbc.Card([
 popover_gene_id_explanations = "The user can enter a gene_id. The output table shows all transcripts assigned to this gene_id."
 popover_transcripts_by_region= "The user can specify a region (chromosome, start [bp], stop [bp], strand; annotation used: NCBI hg38 human genome). The output table shows all transcripts that have an exon overlapping this region (see figure)."
 
-card_1a = dbc.Card([
-    dbc.CardHeader("Search Transcripts by Gene ID or Genomic Region"),
+tab1_content_transcripts = dbc.Card(
     dbc.CardBody([
-        dbc.Row([
+            dbc.Row([
             html.H4('Show transcripts by gene_id'),
-        ]),
+            ]),
+            dbc.Button(
+                        "Info",
+                        id="hover-target-gene-id",
+                        color="info",
+                        className="me-1",
+                        n_clicks=0,
+                    ),
+                    dbc.Popover(
+                        popover_gene_id_explanations,
+                        target="hover-target-gene-id",
+                        body=True,
+                        trigger="hover"),
+            html.Br(),
+            html.Br(),
+            dbc.Row([
+                dbc.Col([dbc.Input(type="text", id='gene-id',  placeholder='NSTRG.8029'),], width=6),
+                dbc.Col([html.P(id='gene-id-err',style={'color':'red'}),], width=6),
+            ]),
+            dbc.Row([
+                dbc.Col([html.Br(),]),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    dash_table.DataTable(id='search-output-gene-id',columns=[],data=[], export_format="csv"),
+                ]),
+            ]),
+            html.Br(),
+         ]
+    ),
+    className="mt-3",
+)
+
+tab2_content_transcripts = dbc.Card(
+    dbc.CardBody(
+        [
+        dbc.Row([
+                html.Br(),
+                html.H4('Show transcripts that overlap genomic region'),
+            ]),
         dbc.Button(
-                    "Info",
-                    id="hover-target-gene-id",
-                    color="info",
-                    className="me-1",
-                    n_clicks=0,
-                ),
-                dbc.Popover(
-                    popover_gene_id_explanations,
-                    target="hover-target-gene-id",
-                    body=True,
-                    trigger="hover"),
+                        "Info",
+                        id="hover-target-region",
+                        color="info",
+                        className="me-1",
+                        n_clicks=0,
+                    ),
+                    dbc.Popover(
+                        popover_transcripts_by_region,
+                        target="hover-target-region",
+                        body=True,
+                        trigger="hover"),
         html.Br(),
         html.Br(),
         dbc.Row([
-            dbc.Col([dbc.Input(type="text", id='gene-id',  placeholder='NSTRG.8029'),], width=6),
-            dbc.Col([html.P(id='gene-id-err',style={'color':'red'}),], width=6),
-        ]),
-        dbc.Row([
-            dbc.Col([html.Br(),]),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                dash_table.DataTable(id='search-output-gene-id',columns=[],data=[], export_format="csv"),
+                html.Div(html.Img(src=app.get_asset_url('AbbildungExon.png'), alt='image', style={'width':'20%'})),
+                html.Br(),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.Div([dbc.Label("chromosom: "),
+                    dbc.Input(id='text-chro', value='chr10', type='text'),]),
+                ], width=6),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.Div([dbc.Label("start: "),
+                    dbc.Input(id='text-start', value='133086592', type='text'),]),
+                ], width=6),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.Div([dbc.Label("stop: "),
+                    dbc.Input(id='text-stop', value='133131675', type='text'),]),
+                ], width=6),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.Div([dbc.Label("strand: "),
+                    dbc.Input(id='text-strand', value='+', type='text'),]),
+                ], width=6),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.Br(),
+                    dbc.Button('Find transcripts', id='my-button', n_clicks=0),
+                    html.P(id='output-exon-err',style={'color':'red'}),
+                    html.Br(),
+                ], width=6),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    dbc.Button("Export", id="btn-exon",  color="secondary", n_clicks=0), 
+                    dcc.Download(id="download-exon"),
+                ], width=2)
+            ]),
+            dbc.Row([
+                dash_table.DataTable(id='search-output-exon',columns=[],data=[]),
+                html.Br(),
             ]),
         ]),
-        html.Br(),
-        dbc.Row([
-            html.Br(),
-            html.H4('Show transcripts that overlap genomic region'),
-        ]),
-        dbc.Button(
-                    "Info",
-                    id="hover-target-region",
-                    color="info",
-                    className="me-1",
-                    n_clicks=0,
-                ),
-                dbc.Popover(
-                    popover_transcripts_by_region,
-                    target="hover-target-region",
-                    body=True,
-                    trigger="hover"),
-        html.Br(),
-        html.Br(),
-        dbc.Row([
-            html.Div(html.Img(src=app.get_asset_url('AbbildungExon.png'), alt='image', style={'width':'20%'})),
-            html.Br(),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.Div([dbc.Label("chromosom: "),
-                dbc.Input(id='text-chro', value='chr10', type='text'),]),
-            ], width=6),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.Div([dbc.Label("start: "),
-                dbc.Input(id='text-start', value='133086592', type='text'),]),
-            ], width=6),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.Div([dbc.Label("stop: "),
-                dbc.Input(id='text-stop', value='133131675', type='text'),]),
-            ], width=6),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.Div([dbc.Label("strand: "),
-                dbc.Input(id='text-strand', value='+', type='text'),]),
-            ], width=6),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.Br(),
-                dbc.Button('Find transcripts', id='my-button', n_clicks=0),
-                html.P(id='output-exon-err',style={'color':'red'}),
-                html.Br(),
-            ], width=6),
-        ]),
-        dbc.Row([
-            dbc.Col([
-                dbc.Button("Export", id="btn-exon",  color="secondary", n_clicks=0), 
-                dcc.Download(id="download-exon"),
-            ], width=2)
-        ]),
-        dbc.Row([
-            dash_table.DataTable(id='search-output-exon',columns=[],data=[]),
-            html.Br(),
-        ]),
-    ])
+    className="mt-3",
+)
+
+card_1a = dbc.Card([
+    dbc.CardHeader("Search Transcripts by Gene ID or Genomic Region"),
+    dbc.Tabs(
+                [
+                    dbc.Tab(tab1_content_transcripts, label="Transcripts by Gene ID"),
+                    dbc.Tab(tab2_content_transcripts, label="Transcripts that overlap genomic region"),
+                ]
+            ),
 ])
 
 popover_exon_structure_explanations = "The user can select a specific transcript based on the transcript_id (e.g. NSTRG.8029.1, NTRG.8029.2, NM_001291085.1). The output table will show the exons of this transcript with start and end coordinates to be used e.g. in the genome browser (hg38)."
@@ -2355,8 +2432,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel), b64_image(heatmap_abs))
-    
-        
+
 # start the server of the  app
 server = app.server 
 
