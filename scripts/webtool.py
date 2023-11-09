@@ -304,19 +304,27 @@ def plot_heatmap(tpms, transcripts, relative=True):
         transcripts (pd.Series): Series of transcript names.
     """
 
-    plt.figure(figsize=(4, 3))
-    sns.set(font_scale=0.4)
-    sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1)
+    plt.figure(figsize=(8, 6))
+    sns.set(font_scale=0.9)
 
     if relative:
-        plt.title('TPM (% across tissue)')
+        cbar_legend = 'TPM (% across tissue)'
     else:
-        plt.title('TPM (mean across tissue)')
-    plt.yticks(np.arange(len(transcripts)) + 0.5, transcripts, rotation=0)
-    plt.xticks(rotation=45, ha='right', fontsize=2)
+        cbar_legend = 'TPM (mean across tissue)'
 
-    plt.xlabel('tissues', fontsize=3)
-    plt.ylabel('transcripts', fontsize=3)
+    sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1, cbar_kws={'label': cbar_legend})
+
+    if relative:
+        plt.title('Relative expression of transcript of the total transcript count', fontsize=10)
+    else:
+        plt.title('Absolute expression of transcript', fontsize=10)
+
+    plt.yticks(np.arange(len(transcripts)) + 0.5, transcripts, rotation=0, fontsize=8)
+    plt.xticks(rotation=45, ha='right', fontsize=7)
+
+    plt.xlabel('tissues', fontsize=10)
+    plt.ylabel('transcripts', fontsize=10)
+
     plt.tight_layout()
     
     try:
