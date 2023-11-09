@@ -1422,7 +1422,7 @@ card1 = dbc.Card([
                 dbc.Input(id='strand', value='', type='text'),])
             ],width=2),
             dbc.Col([
-                html.Div([dbc.Label("variants to depict (positions separated by comma):"),
+                html.Div([dbc.Label("genomic variants to depict (positions separated by comma):"),
                 dbc.Input(id='mutation', placeholder='position', type='text'),])
             ],width=2),
             dbc.Col([
