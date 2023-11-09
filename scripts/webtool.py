@@ -1460,7 +1460,8 @@ card1 = dbc.Card([
                     dash_table.DataTable(
                         id='search-output-ref-geneA',
                         columns=[],
-                        data=[],  
+                        data=[], 
+                        sort_action='native',  # Enable native sorting
                         style_cell={'fontSize':14}
                         )
                     ),
@@ -1500,7 +1501,7 @@ tab1_content_transcripts = dbc.Card(
             ]),
             dbc.Row([
                 dbc.Col([
-                    dash_table.DataTable(id='search-output-gene-id',columns=[],data=[], export_format="csv"),
+                    dash_table.DataTable(id='search-output-gene-id',columns=[],data=[], sort_action='native',export_format="csv"),
                 ]),
             ]),
             html.Br(),
@@ -1573,7 +1574,7 @@ tab2_content_transcripts = dbc.Card(
                 ], width=2)
             ]),
             dbc.Row([
-                dash_table.DataTable(id='search-output-exon',columns=[],data=[]),
+                dash_table.DataTable(id='search-output-exon',columns=[],data=[],sort_action='native'),
                 html.Br(),
             ]),
         ]),
@@ -1627,7 +1628,7 @@ card2 = dbc.Card([
                 ], width=2)
             ]),
         dbc.Row([
-            dash_table.DataTable(id='search-output-transcript-id',columns=[],data=[]),
+            dash_table.DataTable(id='search-output-transcript-id',columns=[],data=[],sort_action='native'),
             html.Br(),
         ]),
       ]),
@@ -1681,7 +1682,7 @@ card3 = dbc.Card([
                 html.Br(),
                 dcc.Loading(
                     type="default", 
-                    children = dash_table.DataTable(id='table-sql-output',columns=[],data=[], export_format="csv"),
+                    children = dash_table.DataTable(id='table-sql-output',columns=[],data=[],sort_action='native', export_format="csv"),
                 )
             ]),
         ]),
