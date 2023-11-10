@@ -17,6 +17,7 @@ import base64
 from io import BytesIO
 import twobitreader
 import seaborn as sns
+import plotly.express as px
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -304,35 +305,60 @@ def plot_heatmap(tpms, transcripts, relative=True):
         transcripts (pd.Series): Series of transcript names.
     """
 
-    plt.figure(figsize=(8, 6))
-    sns.set(font_scale=0.9)
+    #transform tpms to numpy array
+    data = tpms.to_numpy()
+    x_labels = tpms.columns
+    y_labels = transcripts
 
     if relative:
         cbar_legend = 'TPM (% across tissue)'
+        title_figure = "Relative expression of transcripts (% total gene count)"
     else:
         cbar_legend = 'TPM (mean across tissue)'
+        title_figure = "Absolute expression of transcripts"
 
-    sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1, cbar_kws={'label': cbar_legend})
+    fig = px.imshow(data,
+                labels=dict(x="Tissues", y="Transcripts", color=cbar_legend),
+                x=x_labels,
+                y=y_labels,
+               )
+    fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=18)    
+    fig.update_layout(font=dict(size=16))  # Set the font size to your desired value
+    fig.update_xaxes(tickangle=45)
+    # fig.update_layout(width=1800)  # Set the width to your desired value
+    fig.update_layout(height=700)  # Set the height to your desired value
 
-    if relative:
-        plt.title('Relative expression of transcript of the total transcript count', fontsize=10)
-    else:
-        plt.title('Absolute expression of transcript', fontsize=10)
+    # plt.figure(figsize=(8, 6))
+    # sns.set(font_scale=0.9)
 
-    plt.yticks(np.arange(len(transcripts)) + 0.5, transcripts, rotation=0, fontsize=8)
-    plt.xticks(rotation=45, ha='right', fontsize=7)
+    # if relative:
+    #     cbar_legend = 'TPM (% across tissue)'
+    # else:
+    #     cbar_legend = 'TPM (mean across tissue)'
 
-    plt.xlabel('tissues', fontsize=10)
-    plt.ylabel('transcripts', fontsize=10)
+    # sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1, cbar_kws={'label': cbar_legend})
 
-    plt.tight_layout()
-    
+    # if relative:
+    #     plt.title('Relative expression of transcript of the total transcript count', fontsize=10)
+    # else:
+    #     plt.title('Absolute expression of transcript', fontsize=10)
+
+    # plt.yticks(np.arange(len(transcripts)) + 0.5, transcripts, rotation=0, fontsize=8)
+    # plt.xticks(rotation=45, ha='right', fontsize=7)
+
+    # plt.xlabel('tissues', fontsize=10)
+    # plt.ylabel('transcripts', fontsize=10)
+
+    # plt.tight_layout()
+
     try:
-        output = BytesIO()
-        plt.savefig(output, dpi=300)
-        plt.clf()
-        print(f"Heatmap created")
-        return output.getvalue()
+        # output = BytesIO()
+        # # plt.savefig(output, dpi=300)
+        # # plt.close()
+        # heatmap_fig = px.imshow(output.getvalue())
+        # print(type(heatmap_fig))
+        return fig
+        # return heatmap_fig
     except Exception as e:
         print(f"An error occurred while saving the heatmap: {str(e)}")
 
@@ -1129,7 +1155,7 @@ ref_gene_names, tissues_and_samples, tissues = fill_dropdowns_in_dash_applicatio
 #APP Layout
 # the app has 4 cards to far
 card_explanation = dbc.Card([
-    dbc.CardHeader("How-to-use"),
+    dbc.CardHeader("How-to-use", style={"font-size": "24px"}),
     dbc.CardBody([
         dbc.Row([
             dbc.Col([
@@ -1201,13 +1227,11 @@ popover_step1_option2_explanations  = "The user can select one or more samples (
 tab1_content_sample_selection = dbc.Card(
     dbc.CardBody(
         [
-            html.H4('Step 1: Sample selection', style={'color': 'dark blue'}),
             dbc.Row(
                 [
                     dbc.Col(
                         [
-                            html.Br(),
-                            html.H6('Option 1: Across all/specific samples:', style={'color': 'dark blue'}),
+                            # html.H6('Option 1: Across all/specific samples:', style={'color': 'dark blue'}),
                             dbc.Button(
                                 "Info",
                                 id="hover-target-option1",
@@ -1232,7 +1256,7 @@ tab1_content_sample_selection = dbc.Card(
                                                 id='all-tissues-dropdown',
                                                 multi=True
                                             ),
-                                        ], width=8
+                                        ], width=6
                                     ),
                                     dbc.Col(
                                         [
@@ -1274,11 +1298,8 @@ tab2_content_sample_selection = dbc.Card(
     [
         dbc.CardBody(
             [
-                html.H4('Step 1: Sample selection', style={'color': 'dark blue'}),
                 dbc.Col(
                     [
-                        html.Br(),
-                        html.H6('Option 2: Group Comparison (A vs. B):', style={'color': 'dark blue'}),
                         dbc.Button(
                             "Info",
                             id="hover-target-option2",
@@ -1344,7 +1365,7 @@ tab2_content_sample_selection = dbc.Card(
 )
 
 card0 = dbc.Card([
-    dbc.CardHeader("Select Tissues"),
+    dbc.CardHeader("Step 1: Sample/Tissue selection", style={"font-size": "24px"}),
     dbc.Tabs(
                 [
                     dbc.Tab(tab1_content_sample_selection, label="Option 1: Across all tissues/samples"),
@@ -1362,9 +1383,8 @@ popover_step2_explanations = "The user can select a gene (based on the annotatio
 
 # card1
 card1 = dbc.Card([
-    dbc.CardHeader("Select Transcripts by Gene Name"),
+    dbc.CardHeader("Step 2: Discover transcripts of a gene", style={"font-size": "24px"}),
     dbc.CardBody([
-        html.H4('Step 2: Discover transcripts of a gene',style={'color':'dark blue'}),
         dbc.Button(
             "Info",
             id="hover-target-step2",
@@ -1381,17 +1401,18 @@ card1 = dbc.Card([
         html.Br(),
         dbc.Row([
             dbc.Col([
-                dbc.Row([
-                    html.H6('Select a gene and search for transcripts:'),
-                    dbc.Col([
-                        dcc.Dropdown(id='my-dynamic-dropdown'),
-                    ], width=8),
-                    dbc.Col([
-                        dbc.Button('Search transcripts', id='transcript-button', color="primary", n_clicks=0),
-                    ], width=4),
-                ]),
-            ], width=6),
-            dbc.Col([], width=6),
+                html.H6('Select a gene and search for transcripts:'),
+            ]),
+        ]),
+        dbc.Row([
+            dbc.Col([
+                dcc.Dropdown(id='my-dynamic-dropdown'),
+                ], width=6),
+            dbc.Col([
+                dbc.Button('Search transcripts', id='transcript-button', color="primary", n_clicks=0),
+            ], width=4),
+            dbc.Col([
+            ], width=2),
         ]),
         html.Br(),
         dbc.Row([
@@ -1450,12 +1471,19 @@ card1 = dbc.Card([
             ]), 
             dbc.Row([
                 dbc.Col([
-                    html.Div(html.Img(id="heatmap-relatives", width="100%"))
-                ],width=6),
-                dbc.Col([
-                    html.Div(html.Img(id="heatmap-absolutes", width="100%"))
-                ],width=6),
+                    # html.Div(id="heatmap-relatives")
+                    html.Div([dcc.Graph(id="heatmap-relatives")])
+                    # html.Div(html.Img(id="heatmap-relatives", width="100%"))
+                ],width=12),
             ]), 
+            html.Br(),
+            dbc.Row([
+                dbc.Col([
+                    # html.Div(id="heatmap-absolutes")
+                    html.Div([dcc.Graph(id="heatmap-absolutes")])
+                    # html.Div(html.Img(id="heatmap-absolutes", width="100%"))
+                ],width=12),
+            ]),
             dbc.Row([
                 dbc.Col([
                     dbc.Button("Export", id="btn",  color="secondary", n_clicks=0), 
@@ -1484,7 +1512,7 @@ popover_transcripts_by_region= "The user can specify a region (chromosome, start
 tab1_content_transcripts = dbc.Card(
     dbc.CardBody([
             dbc.Row([
-            html.H4('Show transcripts by gene_id'),
+            html.H6('Show transcripts by gene_id'),
             ]),
             dbc.Button(
                         "Info",
@@ -1523,7 +1551,7 @@ tab2_content_transcripts = dbc.Card(
         [
         dbc.Row([
                 html.Br(),
-                html.H4('Show transcripts that overlap genomic region'),
+                html.H6('Show transcripts that overlap genomic region'),
             ]),
         dbc.Button(
                         "Info",
@@ -1590,7 +1618,7 @@ tab2_content_transcripts = dbc.Card(
 )
 
 card_1a = dbc.Card([
-    dbc.CardHeader("Search Transcripts by Gene ID or Genomic Region"),
+    dbc.CardHeader("Search Transcripts by Gene ID or Genomic Region", style={"font-size": "24px"}),
     dbc.Tabs(
                 [
                     dbc.Tab(tab1_content_transcripts, label="Transcripts by Gene ID"),
@@ -1603,10 +1631,10 @@ popover_exon_structure_explanations = "The user can select a specific transcript
 
 #card 2
 card2 = dbc.Card([
-    dbc.CardHeader("Exon structure"),
+    dbc.CardHeader("Exon structure", style={"font-size": "24px"}),
     dbc.CardBody([
         dbc.Row([
-            html.H4('Get exon structure of specific transcript'),
+            html.H6('Get exon structure of specific transcript'),
         ]),
         dbc.Button(
                     "Info",
@@ -1646,10 +1674,10 @@ popover_sql_statement = "The user can make custom SQL queries to the database ac
 
 #card 3
 card3 = dbc.Card([
-    dbc.CardHeader("SQL statement:"),
+    dbc.CardHeader("SQL statement:", style={"font-size": "24px"}),
     dbc.CardBody([  
         dbc.Row([
-            html.H4('Execute SQL statement'),
+            html.H6('Execute SQL statement'),
         ]),
         dbc.Button(
                     "Info",
@@ -1700,7 +1728,7 @@ card3 = dbc.Card([
 
 #card 4
 card4 = dbc.Card([
-    dbc.CardHeader("Info"),
+    dbc.CardHeader("Info", style={"font-size": "24px"}),
     dbc.CardBody([          
         html.P("We obtained three brain tissue dataset (GSE173955, GSE182321, GSE101521), one liver tissue dataset (GSE174478), one heart tissue dataset (GSE165303), one kidney tissue dataset (GSE217427) and one dataset including 45 different tissues types (GSE138734) from the Gene Expression Omnibus (GEO) public dataset. We further obtained one melanoma cancer dataset (PRJEB23709) from the European Nucleotide Archive. Only paired-end RNA-seq samples were included and datasets generated without random primers were excluded. The raw data was mapped against the hg38 human genome using STAR (version 2.7.6a) with default parameters. After indexing with samtools (version 1.9) the mapped reads were assembled to transcripts and quantified by StringTie (version v2.1.3b). StringTie parameters ‘read coverage’ (-c), ‘transcript length’ (-m) and ‘bases on both sides of a junction a spliced read has to cover’ (-a) were set to minimal values in order to avoid missing transcripts and generating a bias. The parameter ‘fraction of most abundant transcript at one locus’ (-f) was lowered from default (0.01) to 0. For all other StringTie parameters default values were used. To generate a global, unified set of transcripts across all three RNA-Seq samples, StringTie merge mode with providing the reference annotation (-G) was used. Quantification of abundance of the input transcripts was then performed using parameters ‘expression estimation mode’ (-e) with parameters ‘ballgown output’ (-B) and the beforehand generated ‘reference annotation transcripts’ (-G)."),
         html.P("Annotated transcripts are labeled with their RefSeq accessions: NM = Protein-coding transcripts (usually curated), NR = Non-protein-coding transcripts, XM = Predicted model protein-coding transcript, XR = Predicted model non-protein-coding transcript. Potential new transcripts assigned by Stringtie (not in the NCBI hg38 genome annotation) are annotated with 'NSTR'"),
@@ -2227,6 +2255,7 @@ def run_sql_statement(n_clicks, value):
             con.close()
             return (data, columns, "")
         
+
 # ! Main and most important callback in the app
 @app.callback(
    [Output('search-output-ref-geneA','data'), 
@@ -2238,8 +2267,8 @@ def run_sql_statement(n_clicks, value):
     Output('chrom','value'),
     Output('strand','value'), 
     Output('mutation','value'), 
-    Output('heatmap-relatives','src'),
-    Output('heatmap-absolutes','src')], 
+    Output('heatmap-relatives','figure'),#changed
+    Output('heatmap-absolutes','figure')], #changed from src
     [Input('transcript-button', 'n_clicks'),
      Input('update-button', 'n_clicks')], 
     [State('my-dynamic-dropdown', 'value'), 
@@ -2311,6 +2340,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(result_df, True)
+            print(type(heatmap_rel))
             heatmap_abs = generate_heatmap(result_df, False)
             con.close()
             print("Average TPM calcuated")
@@ -2324,8 +2354,10 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             data = result_df.to_dict('records')
             
             #calculate statisical test AVONVA for TPM over all tissues
+            print("HERE")
             
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, heatmap_abs)
+            # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
             #if user did not select group A or B then present only transcripts in search-output-ref-geneA 
@@ -2386,7 +2418,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
-                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
+                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, (heatmap_rel), (heatmap_abs))
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
@@ -2411,7 +2443,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel),b64_image(heatmap_abs))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, (heatmap_rel), (heatmap_abs))
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
@@ -2440,7 +2472,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, b64_image(heatmap_rel), b64_image(heatmap_abs))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, (heatmap_rel), (heatmap_abs))
 
 # start the server of the  app
 server = app.server 
