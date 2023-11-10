@@ -325,40 +325,11 @@ def plot_heatmap(tpms, transcripts, relative=True):
     fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=18)    
     fig.update_layout(font=dict(size=16))  # Set the font size to your desired value
     fig.update_xaxes(tickangle=45)
-    # fig.update_layout(width=1800)  # Set the width to your desired value
+    # fig.update_layout(width=1800)  # Set the width to your desired value for manuscript
     fig.update_layout(height=700)  # Set the height to your desired value
 
-    # plt.figure(figsize=(8, 6))
-    # sns.set(font_scale=0.9)
-
-    # if relative:
-    #     cbar_legend = 'TPM (% across tissue)'
-    # else:
-    #     cbar_legend = 'TPM (mean across tissue)'
-
-    # sns.heatmap(tpms, cbar=True, xticklabels=1, yticklabels=1, cbar_kws={'label': cbar_legend})
-
-    # if relative:
-    #     plt.title('Relative expression of transcript of the total transcript count', fontsize=10)
-    # else:
-    #     plt.title('Absolute expression of transcript', fontsize=10)
-
-    # plt.yticks(np.arange(len(transcripts)) + 0.5, transcripts, rotation=0, fontsize=8)
-    # plt.xticks(rotation=45, ha='right', fontsize=7)
-
-    # plt.xlabel('tissues', fontsize=10)
-    # plt.ylabel('transcripts', fontsize=10)
-
-    # plt.tight_layout()
-
     try:
-        # output = BytesIO()
-        # # plt.savefig(output, dpi=300)
-        # # plt.close()
-        # heatmap_fig = px.imshow(output.getvalue())
-        # print(type(heatmap_fig))
         return fig
-        # return heatmap_fig
     except Exception as e:
         print(f"An error occurred while saving the heatmap: {str(e)}")
 
@@ -1472,7 +1443,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-relatives")
-                    html.Div([dcc.Graph(id="heatmap-relatives")])
+                    html.Div([dcc.Graph(id="heatmap-relatives", style={'display':'none'})])
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
             ]), 
@@ -1480,7 +1451,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-absolutes")
-                    html.Div([dcc.Graph(id="heatmap-absolutes")])
+                    html.Div([dcc.Graph(id="heatmap-absolutes",style={'display':'none'})])
                     # html.Div(html.Img(id="heatmap-absolutes", width="100%"))
                 ],width=12),
             ]),
@@ -2267,8 +2238,10 @@ def run_sql_statement(n_clicks, value):
     Output('chrom','value'),
     Output('strand','value'), 
     Output('mutation','value'), 
-    Output('heatmap-relatives','figure'),#changed
-    Output('heatmap-absolutes','figure')], #changed from src
+    Output('heatmap-relatives','figure'),
+    Output('heatmap-relatives','style'), 
+    Output('heatmap-absolutes','figure'), 
+    Output('heatmap-absolutes','style')],
     [Input('transcript-button', 'n_clicks'),
      Input('update-button', 'n_clicks')], 
     [State('my-dynamic-dropdown', 'value'), 
@@ -2353,10 +2326,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             columns = [{"name": i, "id":i } for i in result_df.columns]
             data = result_df.to_dict('records')
             
-            #calculate statisical test AVONVA for TPM over all tissues
-            print("HERE")
-            
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, heatmap_abs)
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
             # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
@@ -2381,7 +2351,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                         shown here are possible variants resulting from all analyzed datasets (a list of all datasets see 'info').\
                          This means the user sees a global, unified set of transcripts across multiple RNA-Seq samples.\
                          To compare the quantification (TPM) of transcript-variants per tissue or sample, \
-                        select the corresponding groups.", start, stop, chrom, strand, None, None, None)
+                        select the corresponding groups.", start, stop, chrom, strand, None, None, {'display': 'none'}, None, {'display': 'none'})
 
             else: #if user did select group then present calculate avg tpm and fpkm from groupA and groupB
                 print("--groups selected--")
@@ -2418,7 +2388,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
-                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, (heatmap_rel), (heatmap_abs))
+                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
@@ -2429,7 +2399,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             print(transcripts)
             if transcripts.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, None)
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
             #get list of transcript_id from transcripts
             transcript_ids = transcripts["transcript_id"]
             # for gene_id in set(transcripts["gene_id"]):
@@ -2443,25 +2413,25 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, (heatmap_rel), (heatmap_abs))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
             df_result = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if df_result.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand,mutation, None,None)
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'})
             #sort df_result by transcript_id
             df_result = df_result.sort_values(by=['transcript_id'])
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
                     
-            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, None)
+            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
         else:
             print("--groups selected--")
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if transcripts.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, None)
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
             print(transcripts)
             transcript_ids = transcripts["transcript_id"]
             df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
@@ -2472,7 +2442,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, (heatmap_rel), (heatmap_abs))
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
 # start the server of the  app
 server = app.server 
