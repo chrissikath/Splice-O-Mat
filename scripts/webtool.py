@@ -305,8 +305,6 @@ def plot_heatmap(tpms, transcripts, relative=True):
         transcripts (pd.Series): Series of transcript names.
     """
 
-    #transform tpms to numpy array
-    data = tpms.to_numpy()
     x_labels = tpms.columns
     y_labels = transcripts
 
@@ -317,7 +315,7 @@ def plot_heatmap(tpms, transcripts, relative=True):
         cbar_legend = 'TPM (mean across tissue)'
         title_figure = "Absolute expression of transcripts"
 
-    fig = px.imshow(data,
+    fig = px.imshow(tpms.values,
                 labels=dict(x="Tissues", y="Transcripts", color=cbar_legend),
                 x=x_labels,
                 y=y_labels,
@@ -632,7 +630,7 @@ def get_proteins(ref_gene_id):
             if start_genome<=end_genome:
                 proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
             else:
-                s = len(cDNA_Seq) - end_pos+1
+                s = len(cDNA_Seq) - (end_pos+1)
                 e = len(cDNA_Seq) - start_pos
                 proteins[transcript] = cDNA_Seq[s:e].translate()
         return proteins
