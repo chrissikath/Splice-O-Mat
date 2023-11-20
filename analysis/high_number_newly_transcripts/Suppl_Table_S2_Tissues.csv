@@ -1,0 +1,49 @@
+Tissue,Number of Samples
+brain*,67
+brain opioid,41
+brain alzheimer,40
+brain fetal,8
+brain frontal cortex,8
+brain parietal cortex,11
+brain occipital cortex,11
+brain striatum,11
+brain stem,8
+brain cerebellum,8
+esophagus,8
+stomach,16
+small intestine,8
+duodenum,8
+jejunum colon,16
+ileum colon,16
+colon,8
+proximal colon,8
+distal colon,8
+liver,102
+pancreas,8
+kidney,52
+bladder,8
+breast,8
+ovary,8
+fallopian tube,16
+uterus,8
+cervix,16
+placenta,8
+prostate,8
+testicle,8
+heart,117
+pericardium,8
+right atrium heart,16
+left atruim,8
+right ventricle heart,16
+left ventricle heart,8
+vena cava,8
+trachea,8
+lung,16
+thymus,16
+spleen,8
+lymph node,8
+thyroid,8
+adrenal,16
+adipose,8
+skeletal muscle,8
+melanoma,91
