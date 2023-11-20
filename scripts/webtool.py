@@ -358,7 +358,7 @@ def generate_svg(transcripts, position_mut=None):
     size = 2000 #size of whole svg
     d = svgwrite.Drawing(viewBox="0 0 "+ str(size+300) +" "+ str(y+450) +"")
     #explain colors in svg
-    d.add(svgwrite.text.Text("red = displays the longest ORF for a potentially new transcript, might not be the 'true' one.",\
+    d.add(svgwrite.text.Text("red = displays the longest ORF for a potentially new transcript (NSTRG_), might not be the 'true' one.",\
                               insert=(x_start, y_start), style="font-size:24"))
     d.add(svgwrite.text.Text("orange = displays the longest ORF for the transcript, might not be the 'true' one.", \
                              insert=(x_start, y_start+20), style="font-size:24"))
@@ -1202,7 +1202,6 @@ tab1_content_sample_selection = dbc.Card(
                 [
                     dbc.Col(
                         [
-                            # html.H6('Option 1: Across all/specific samples:', style={'color': 'dark blue'}),
                             dbc.Button(
                                 "Info",
                                 id="hover-target-option1",
@@ -1214,7 +1213,8 @@ tab1_content_sample_selection = dbc.Card(
                                 popover_step1_option1_explanations,
                                 target="hover-target-option1",
                                 body=True,
-                                trigger="hover"
+                                trigger="hover",
+                                style={"font-size": "18px", "min-width": "50%"}
                             ),
                             html.Br(),
                             html.Br(),
@@ -1282,7 +1282,8 @@ tab2_content_sample_selection = dbc.Card(
                             popover_step1_option2_explanations,
                             target="hover-target-option2",
                             body=True,
-                            trigger="hover"
+                            trigger="hover",
+                            style={"font-size": "18px", "min-width": "50%"}
                         ),
                         html.Br(),
                         html.Br(),
@@ -1348,7 +1349,7 @@ card0 = dbc.Card([
 popover_step2_explanations = "The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
     The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_id) \
     including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTR, not already annotated in the NCBI annotation) of the selected gene. \
-    NSTRG's were assigned gene_names derived from those annotated transcripts that they overlapped with the most. \
+    NSTRG's were assigned to the gene derived from the annotated transcripts with which they overlapped the most. \
     This was done counting overlapping exonic bases."
 
 
@@ -1367,7 +1368,9 @@ card1 = dbc.Card([
             popover_step2_explanations,
             target="hover-target-step2",
             body=True,
-            trigger="hover"),
+            trigger="hover",
+            style={"font-size": "18px", "min-width": "50%"}
+            ),
         html.Br(),
         html.Br(),
         dbc.Row([
@@ -1496,7 +1499,9 @@ tab1_content_transcripts = dbc.Card(
                         popover_gene_id_explanations,
                         target="hover-target-gene-id",
                         body=True,
-                        trigger="hover"),
+                        trigger="hover",
+                        style={"font-size": "18px", "min-width": "50%"}
+                    ),
             html.Br(),
             html.Br(),
             dbc.Row([
@@ -1535,7 +1540,9 @@ tab2_content_transcripts = dbc.Card(
                         popover_transcripts_by_region,
                         target="hover-target-region",
                         body=True,
-                        trigger="hover"),
+                        trigger="hover",
+                        style={"font-size": "18px", "min-width": "50%"}
+                        ),
         html.Br(),
         html.Br(),
         dbc.Row([
@@ -1618,7 +1625,9 @@ card2 = dbc.Card([
                     popover_exon_structure_explanations,
                     target="hover-target-exon-structure",
                     body=True,
-                    trigger="hover"),
+                    trigger="hover",
+                    style={"font-size": "18px", "min-width": "50%"}
+                    ),
         html.Br(),
         html.Br(),
         dbc.Row([
@@ -1661,7 +1670,9 @@ card3 = dbc.Card([
                     popover_sql_statement,
                     target="hover-target-sql",
                     body=True,
-                    trigger="hover"),
+                    trigger="hover",
+                    style={"font-size": "18px", "min-width": "50%"}
+                    ),
         html.Br(),
         html.Br(),
         dbc.Row([
