@@ -309,10 +309,10 @@ def plot_heatmap(tpms, transcripts, relative=True):
     y_labels = transcripts
 
     if relative:
-        cbar_legend = 'TPM (% across tissue)'
+        cbar_legend = 'TPM (% per tissue)'
         title_figure = "Relative expression of transcripts (% total gene count)"
     else:
-        cbar_legend = 'TPM (mean across tissue)'
+        cbar_legend = 'TPM (mean per tissue)'
         title_figure = "Absolute expression of transcripts"
 
     fig = px.imshow(tpms.values,
@@ -636,7 +636,7 @@ def get_proteins(ref_gene_id):
         return proteins
 
 
-def get_cDNA_from_gene_id(ref_gene_id):
+def get_mRNA_from_gene_id(ref_gene_id):
     """Get all proteins from all transcripts corresponding to ref_gene_id
     # TODO - ? change ref_gene_id to gene_name ? 
 
@@ -772,19 +772,19 @@ def get_TPM_from_tissues(gene_id, tissues):
 
     # TODO: insert protein length of predicted protein after UDO fixed protein (- strand) problem
     print(df_result["gene_name"][0])
-    # predicted_proteins = get_proteins(df_result["gene_name"][0])
-    # print(predicted_proteins)
-    #for each key in dict get the length of the proteins which is coded as the length of the Seq object
+    predicted_proteins = get_proteins(df_result["gene_name"][0])
+    print(predicted_proteins)
+    # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
-    # for transcripts_id in predicted_proteins:
-    #     length_protein.append(len(predicted_proteins[transcripts_id]))
-    # print(length_protein)
+    for transcripts_id in predicted_proteins:
+        length_protein.append(len(predicted_proteins[transcripts_id]))
+    print(length_protein)
     #insert value at column 1
     df_result.insert(3, "length transcript (bp)", length_transcript)
-    # df_result.insert(4, "length predicted protein (as)", length_protein)
-    df_result.insert(4, "start", start)
-    df_result.insert(5, "end", end)
-    df_result.insert(6, "# of exons", number_exons)
+    df_result.insert(4, "length predicted protein (as)", length_protein)
+    df_result.insert(5, "start", start)
+    df_result.insert(6, "end", end)
+    df_result.insert(7, "# of exons", number_exons)
     con.close()
     
     return df_result
@@ -1427,7 +1427,7 @@ card1 = dbc.Card([
         html.Br(),
         dcc.Loading( type="default",children=[
             dbc.Row([
-            dbc.Col(dbc.Button('Get cDNA', id='cDNA-button', color="secondary", n_clicks=0), width=2) ,
+            dbc.Col(dbc.Button('Get mRNA', id='mRNA-button', color="secondary", n_clicks=0), width=2) ,
             dbc.Col(dbc.Button('Get proteins', id='protein-button', color="secondary", n_clicks=0), width=2) ,
             dbc.Col(dbc.Button('Get domains', id='domains-button',  color="secondary",n_clicks=0), width=2) ,
             dbc.Col(dcc.Loading(
@@ -1969,26 +1969,26 @@ def update_options(search_value):
 ### download cDNAs
 @app.callback(
    Output('download-cDNA','data'),
-   [Input('cDNA-button', 'n_clicks')],
+   [Input('mRNA-button', 'n_clicks')],
    [State('my-dynamic-dropdown', 'value')], 
    prevent_initial_call=True,
 )
-def downloadcDNA(n_clicks, value):
-    """Download a file comprising the cDNA sequences of selected transcripts.
+def downloadmRNA(n_clicks, value):
+    """Download a file comprising the mRNA sequences of selected transcripts.
 
     Args:
-        n_clicks (int): number of clicks from cDNA-button
+        n_clicks (int): number of clicks from mRNA-button
         value (string): gene name from dynamic dropdown
 
     Returns:
-        dict: cDNA sequences in a fasta file
+        dict: mRNA sequences in a fasta file
     """    
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
-        cDNA = get_cDNA_from_gene_id(value)
-        fasta = ''.join([ ">"+key+"\n"+cDNA[key]+"\n" for key in cDNA ])
-        return dict(content=fasta,filename="cDNA_"+value+".fasta")
+        mRNA = get_mRNA_from_gene_id(value)
+        fasta = ''.join([ ">"+key+"\n"+mRNA[key]+"\n" for key in mRNA ])
+        return dict(content=fasta,filename="mRNA"+value+".fasta")
 
 @app.callback(
    Output('download-proteins','data'),
