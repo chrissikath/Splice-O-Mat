@@ -34,3 +34,14 @@ button.export:hover {
 .card.mt-3 {
     border-top: 0px solid #dee2e6 !important;
 }
+
+@media only screen and (max-width: 1106px) {
+    #display-size-warning {
+        display: block;  /* Show the warning */
+    }
+}
+@media only screen and (min-width: 1107px) {
+    #display-size-warning {
+        display: none;   /* Hide the warning */
+    }
+}

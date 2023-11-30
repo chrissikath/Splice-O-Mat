@@ -321,10 +321,11 @@ def plot_heatmap(tpms, transcripts, relative=True):
                 y=y_labels,
                )
     fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=18)    
-    fig.update_layout(font=dict(size=16))  # Set the font size to your desired value
+    # fig.update_layout(font=dict(size=14))  # Set the font size to your desired value
+
     fig.update_xaxes(tickangle=45)
     # fig.update_layout(width=1800)  # Set the width to your desired value for manuscript
-    fig.update_layout(height=700)  # Set the height to your desired value
+    # fig.update_layout(height=700)  # Set the height to your desired value
 
     try:
         return fig
@@ -1443,8 +1444,15 @@ card1 = dbc.Card([
             ]), 
             dbc.Row([
                 dbc.Col([
+                    html.Div(
+                        dbc.Alert("Attention: For small display size, heatmap might show only every second transcript and tissue.", color="danger"),
+                        id="display-size-warning")
+                ],width=12),
+            ]),
+            dbc.Row([
+                dbc.Col([
                     # html.Div(id="heatmap-relatives")
-                    html.Div([dcc.Graph(id="heatmap-relatives", style={'display':'none'})])
+                    html.Div([dcc.Graph(id="heatmap-relatives", style={'display':'none'}, responsive=True)])
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
             ]), 
@@ -1452,7 +1460,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-absolutes")
-                    html.Div([dcc.Graph(id="heatmap-absolutes",style={'display':'none'})])
+                    html.Div([dcc.Graph(id="heatmap-absolutes",style={'display':'none'} , responsive=True)])
                     # html.Div(html.Img(id="heatmap-absolutes", width="100%"))
                 ],width=12),
             ]),
