@@ -323,7 +323,7 @@ def plot_heatmap(tpms, transcripts, relative=True):
     fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=18)    
     # fig.update_layout(font=dict(size=14))  # Set the font size to your desired value
 
-    fig.update_xaxes(tickangle=45)
+    fig.update_xaxes(tickangle=-45)
     # fig.update_layout(width=1800)  # Set the width to your desired value for manuscript
     # fig.update_layout(height=700)  # Set the height to your desired value
 
