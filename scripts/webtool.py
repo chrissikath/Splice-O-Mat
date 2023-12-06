@@ -314,18 +314,19 @@ def plot_heatmap(tpms, transcripts, relative=True):
     else:
         cbar_legend = 'TPM (mean per tissue)'
         title_figure = "Absolute expression of transcripts"
-
+    
     fig = px.imshow(tpms.values,
                 labels=dict(x="Tissues", y="Transcripts", color=cbar_legend),
                 x=x_labels,
                 y=y_labels,
+                color_continuous_scale='Inferno'
                )
     fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=18)    
     # fig.update_layout(font=dict(size=14))  # Set the font size to your desired value
 
     fig.update_xaxes(tickangle=-45)
     # fig.update_layout(width=1800)  # Set the width to your desired value for manuscript
-    # fig.update_layout(height=700)  # Set the height to your desired value
+    # fig.update_layout(height=750)  # Set the height to your desired value
 
     try:
         return fig
@@ -1138,7 +1139,15 @@ card_explanation = dbc.Card([
                         " Step 1: Select Tissue/Samples for group comparison or across all tissues",
                         html.Br(),
                         " Step 2: Select Gene for visualization and analysis of transcripts"]),
-            ], width=6),
+            ], width=5),
+            dbc.Col([
+                html.H6("Video Tutorial: "),
+                html.A(
+                    html.Img(src=app.get_asset_url('VideoExplanation.png'), alt='Video Tutorial', style={'width':'100%'}),
+                    href='https://youtu.be/zgZiOQtjWCc?si=wgJ7M4J6ks0nhgKw',
+                    target='_blank'  # Open the link in a new tab
+                )
+            ], width=2),
             dbc.Col([
                 html.H6("More explanations on all functions (press link): "),
                 html.Ul([
@@ -1185,7 +1194,7 @@ card_explanation = dbc.Card([
                         )
                     ]),
                 ])
-            ], width=6)
+            ], width=5)
 
         ]),
     ])
@@ -1452,27 +1461,28 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-relatives")
-                    html.Div([dcc.Graph(id="heatmap-relatives", style={'display':'none'}, responsive=True)])
+                    html.Div([dcc.Graph(id="heatmap-relatives", responsive=True)], id="heatmap-relatives-div", style={'display':'none'})
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
             ]), 
-            html.Br(),
+            dbc.Row([html.Br(),]),
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-absolutes")
-                    html.Div([dcc.Graph(id="heatmap-absolutes",style={'display':'none'} , responsive=True)])
+                    html.Div([dcc.Graph(id="heatmap-absolutes", responsive=True)], id="heatmap-absolutes-div", style={'display':'none'})
                     # html.Div(html.Img(id="heatmap-absolutes", width="100%"))
                 ],width=12),
             ]),
+            dbc.Row([html.Br(),]),
             dbc.Row([
                 dbc.Col([
                     dbc.Button("Export", id="btn",  color="secondary", n_clicks=0), 
                     dcc.Download(id="download"),
-                ], width=2), 
-
+                ], width=2),
             ]),
             dbc.Row([
-                html.Div(
+                dbc.Col([
+                    html.Div(
                     dash_table.DataTable(
                         id='search-output-ref-geneA',
                         columns=[],
@@ -1481,6 +1491,7 @@ card1 = dbc.Card([
                         style_cell={'fontSize':14}
                         )
                     ),
+                ], width=12),   
             ]),
         ]),
     ])
@@ -2256,9 +2267,9 @@ def run_sql_statement(n_clicks, value):
     Output('strand','value'), 
     Output('mutation','value'), 
     Output('heatmap-relatives','figure'),
-    Output('heatmap-relatives','style'), 
+    Output('heatmap-relatives-div','style'), 
     Output('heatmap-absolutes','figure'), 
-    Output('heatmap-absolutes','style')],
+    Output('heatmap-absolutes-div','style')],
     [Input('transcript-button', 'n_clicks'),
      Input('update-button', 'n_clicks')], 
     [State('my-dynamic-dropdown', 'value'), 
