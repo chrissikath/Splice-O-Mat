@@ -442,10 +442,9 @@ def generate_svg(transcripts, position_mut=None):
             
         chrom = exons[0][2]
         strand = exons[0][3]
-        orf = find_longest_ORF(transcript) #find start stop in cDNA of longest ORF
+        start_pos, end_pos, orf_start_in_genome, orf_end_in_genome = find_longest_ORF(transcript) #find start stop in cDNA of longest ORF
 
-        if orf!=None:
-            start_pos, end_pos, orf_start_in_genome, orf_end_in_genome = orf
+        if start_pos!=None:
             if abs(end_pos-start_pos)+1>max_length:
                 max_length=abs(end_pos-start_pos)+1
                 longest_transcript=transcript
@@ -545,17 +544,19 @@ def find_longest_ORF(transcript):
     Returns:
         (int, int, int, int): start_pos on plus, end_pos on plus, start_on_genome, end_on_genome
     """    """"""
+    print("HERE: Find longest ORF")
 
     con = create_connection()
+    
     s, e, gs, ge = con.execute( """select sum( min(e.end,t.cds_start,t.cds_end) - min(e.start,t.cds_start,t.cds_end) ),
-                                          sum( min(e.end,max(t.cds_start,t.cds_end)) - min(e.start,max(t.cds_start,t.cds_end)) ) - 1,
-                                          t.cds_start, t.cds_end-1
-                                   from transcripts t, exons e
-                                   where t.transcript_id=? and e.transcript=t.id""",
-                       (transcript,) ).fetchone() ;
+                                            sum( min(e.end,max(t.cds_start,t.cds_end)) - min(e.start,max(t.cds_start,t.cds_end)) ) - 1,
+                                            t.cds_start, t.cds_end-1
+                                    from transcripts t, exons e
+                                    where t.transcript_id=? and e.transcript=t.id""",
+                        (transcript,) ).fetchone() ;
     con.close() 
     if s==None or e==None or gs==None or ge==None:
-        return None
+        return (None,None,None,None) #no ORF Found
     else:
         return (s,e,gs,ge)
 
@@ -627,7 +628,10 @@ def get_proteins(ref_gene_id):
             cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
             # print("cDNA_string: %s" % cDNA_Seq)
             start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
-
+            if start_pos is None or end_pos is None:
+                print("No ORF found")
+                proteins[transcript]="No ORF found"
+                continue
             print("--ORF from %d to %d--" % (start_genome, end_genome))
             if start_genome<=end_genome:
                 proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
