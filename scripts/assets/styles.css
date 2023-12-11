@@ -35,13 +35,14 @@ button.export:hover {
     border-top: 0px solid #dee2e6 !important;
 }
 
-@media only screen and (max-width: 1106px) {
+/* @media only screen and (max-width: 1106px) {
     #display-size-warning {
-        display: block;  /* Show the warning */
+        display: block;  
     }
 }
 @media only screen and (min-width: 1107px) {
     #display-size-warning {
-        display: none;   /* Hide the warning */
+        display: none;   
     }
-}
+} 
+*/

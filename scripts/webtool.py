@@ -1454,7 +1454,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     html.Div(
-                        dbc.Alert("Attention: For small display size, heatmap might show only every second transcript and tissue.", color="danger"),
+                        dbc.Alert("Attention: For small display size or for high number of transcript variants, heatmap might show only every second transcript and tissue. Please hover over the heatmap for more informtion.", color="danger"),
                         id="display-size-warning")
                 ],width=12),
             ]),
