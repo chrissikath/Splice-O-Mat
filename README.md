@@ -6,7 +6,7 @@ This repository contains all informations and scripts for the paper: <br>
 **Christina Katharina Kuhn, Udo Stenzel, Sandra Berndt, Ines Liebscher, Torsten Schöneberg, Susanne Horn** <br>
 Under Review at Nuclar Acid Research (NAC) <br> 
 
-This includes preprocessing of the datasets (under analysis), the scripts for the webtool (under scripts), and additional analysis for the manuscript (under analysis).  <br>
+This includes preprocessing of the datasets (`/analysis`), the scripts for the webtool (`/scripts`), and additional analysis for the manuscript (`/analysis`).  <br>
 
 ## Table of Contents
 - [Objective](#objective)
