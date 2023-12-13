@@ -147,6 +147,31 @@ def b64_svg(drawing):
     """
     return 'data:image/svg+xml;base64,' + base64.b64encode(drawing.tostring().encode('utf-8')).decode('utf-8')
 
+def transform_to_columns_and_data(result_df):
+    """Adds a href link to the NCBI entry for each transcript_id which is not NSTRG
+
+    Args:
+        result_df (Dataframe): complete dataframe
+
+    Returns:
+        result_df (Dataframe): dataframe with hrefs
+    """
+    result_df = pd.DataFrame(result_df.apply(lambda row: {col: f"[{row[col]}](https://www.ncbi.nlm.nih.gov/nuccore/{row['transcript_id']})"
+                                                      if (col == 'transcript_id' and not row[col].startswith('NSTRG'))
+                                                      else row[col] for col in result_df.columns}, axis=1).tolist())
+    
+    number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
+    result_df.loc[-1] = "" * len(result_df.columns)  # adding a row
+    result_df.loc[-1, "# of exons"] = number_inner_exons
+
+    columns = [
+                {"name": i, "id": i, "presentation": "markdown"} if i == "transcript_id" else {"name": i, "id": i} 
+                for i in result_df.columns
+            ]
+    data = result_df.to_dict('records')
+
+    return columns, data 
+
 def get_start_and_end_genomic_region(transcripts):
     """Get start coordinate and end coordinate of genomic region were 
     first exon of first transcript and last exon of last transcript are located
@@ -544,8 +569,6 @@ def find_longest_ORF(transcript):
     Returns:
         (int, int, int, int): start_pos on plus, end_pos on plus, start_on_genome, end_on_genome
     """    """"""
-    print("HERE: Find longest ORF")
-
     con = create_connection()
     
     s, e, gs, ge = con.execute( """select sum( min(e.end,t.cds_start,t.cds_end) - min(e.start,t.cds_start,t.cds_end) ),
@@ -777,14 +800,11 @@ def get_TPM_from_tissues(gene_id, tissues):
         number_exons.append(number_of_exon)
 
     # TODO: insert protein length of predicted protein after UDO fixed protein (- strand) problem
-    print(df_result["gene_name"][0])
     predicted_proteins = get_proteins(df_result["gene_name"][0])
-    print(predicted_proteins)
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
     for transcripts_id in predicted_proteins:
         length_protein.append(len(predicted_proteins[transcripts_id]))
-    print(length_protein)
     #insert value at column 1
     df_result.insert(3, "length transcript (bp)", length_transcript)
     df_result.insert(4, "length predicted protein (as)", length_protein)
@@ -1492,7 +1512,8 @@ card1 = dbc.Card([
                         columns=[],
                         data=[], 
                         sort_action='native',  # Enable native sorting
-                        style_cell={'fontSize':14}
+                        style_cell={'fontSize':14}, 
+
                         )
                     ),
                 ], width=12),   
@@ -2351,12 +2372,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"], mutation)
 
-            number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
-            #add new row with NONE in every column except "# of exons" == number_inner_exons
-            result_df.loc[-1] = [None] * len(result_df.columns)  # adding a row
-            result_df.loc[-1, "# of exons"] = number_inner_exons
-            columns = [{"name": i, "id":i } for i in result_df.columns]
-            data = result_df.to_dict('records')
+            #add nhref for each transcript_id in NCBI
+            columns, data = transform_to_columns_and_data(result_df)
             
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
             # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
@@ -2375,8 +2392,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 df.columns = ["gene_name","gene_id","transcript_id"]
                 #sort df by transcript_id
                 df = df.sort_values(by=['transcript_id'])
-                columns = [{"name": i, "id": i} for i in df.columns]
-                data = df.to_dict('records')
+                columns, data = transform_to_columns_and_data(df)
+
                 con.close()
                 start, stop, chrom, strand, drawing = generate_svg(transcripts,mutation)
                 return (data, columns, b64_svg(drawing), "No groups selected! The transcripts \
@@ -2414,8 +2431,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 df_result = df_result.sort_values(by=['transcript_id'])
                 heatmap_rel = generate_heatmap(df_result, True)
                 heatmap_abs = generate_heatmap(df_result, False)
-                columns = [{"name": i, "id":i } for i in df_result.columns]
-                data = df_result.to_dict('records')
+
+                columns, data = transform_to_columns_and_data(result_df)
                         
                 con.close()
                 print("Average TPM calcuated")
@@ -2439,9 +2456,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(df_results, True)
             heatmap_abs = generate_heatmap(df_results, False)
+            
+            columns, data = transform_to_columns_and_data(result_df)
 
-            columns = [{"name": i, "id":i } for i in df_results.columns]
-            data = df_results.to_dict('records')
             con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
@@ -2454,6 +2471,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'})
             #sort df_result by transcript_id
             df_result = df_result.sort_values(by=['transcript_id'])
+            columns, data = transform_to_columns_and_data(result_df)
+
+
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
@@ -2469,8 +2489,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
             df_result = calculate_percentage_for_TPM(df_result)
             df_result = df_result.sort_values(by=['transcript_id'])
-            columns = [{"name": i, "id":i } for i in df_result.columns]
-            data = df_result.to_dict('records')
+            columns, data = transform_to_columns_and_data(result_df)
+
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
