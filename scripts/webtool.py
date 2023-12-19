@@ -1380,7 +1380,7 @@ card0 = dbc.Card([
 
 popover_step2_explanations = "The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
     The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_id) \
-    including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTR, not already annotated in the NCBI annotation) of the selected gene. \
+    including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTRG, not already annotated in the NCBI annotation) of the selected gene. \
     NSTRG's were assigned to the gene derived from the annotated transcripts with which they overlapped the most. \
     This was done counting overlapping exonic bases."
 
