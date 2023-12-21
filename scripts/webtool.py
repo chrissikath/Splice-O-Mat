@@ -27,6 +27,17 @@ import subprocess
 import math
 from scipy import stats
 import json
+from pygenomeviz import GenomeViz
+from pygenomeviz.feature import Feature
+from dataclasses import dataclass
+from pygenomeviz import __version__
+from pygenomeviz.config import ASSETS_FILES, TEMPLATE_HTML_FILE
+import textwrap
+from matplotlib.figure import Figure
+from pathlib import Path
+import io
+from typing import Union
+
 
 #################### 1.0 Helper Functions ############################
 ####### configuration #######
@@ -147,7 +158,7 @@ def b64_svg(drawing):
     """
     return 'data:image/svg+xml;base64,' + base64.b64encode(drawing.tostring().encode('utf-8')).decode('utf-8')
 
-def transform_to_columns_and_data(result_df):
+def transform_to_columns_and_data(result_df, exon_number=True):
     """Adds a href link to the NCBI entry for each transcript_id which is not NSTRG
 
     Args:
@@ -160,9 +171,10 @@ def transform_to_columns_and_data(result_df):
                                                       if (col == 'transcript_id' and not row[col].startswith('NSTRG'))
                                                       else row[col] for col in result_df.columns}, axis=1).tolist())
     
-    number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
-    result_df.loc[-1] = "" * len(result_df.columns)  # adding a row
-    result_df.loc[-1, "# of exons"] = number_inner_exons
+    if exon_number:
+        number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
+        result_df.loc[-1] = "" * len(result_df.columns)  # adding a row
+        result_df.loc[-1, "# of exons"] = number_inner_exons
 
     columns = [
                 {"name": i, "id": i, "presentation": "markdown"} if i == "transcript_id" else {"name": i, "id": i} 
@@ -357,6 +369,176 @@ def plot_heatmap(tpms, transcripts, relative=True):
         return fig
     except Exception as e:
         print(f"An error occurred while saving the heatmap: {str(e)}")
+
+def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
+    """Generates an interactive svg for a transcript variants of the list transcripts.
+    Also plots the mutation position if position_mut is given.
+
+    Uses the github package pygenomeviz to generate the svg.
+    Shimoyama, Y. (2022). pyGenomeViz: A genome visualization python package for comparative genomics [Computer software]. https://github.com/moshi4/pyGenomeViz
+
+    Args:
+        transcripts (list): list of transcript ids like '[NSTRG.8029.1, NSTRG.8029.2]'
+        position_mut (string, optional): Mutations or list of mutations like '12344566,123456' Defaults to None.
+
+    Returns:
+        None
+    """
+    file_path = "assets/transcript_plot.html" #were figure will be saved
+
+    print("--Generate interactive svg--") 
+
+    start_genomic_region_of_transcript, end_genomic_region_of_transcript,y = get_start_and_end_genomic_region(transcripts)
+    absolut = (end_genomic_region_of_transcript-start_genomic_region_of_transcript)
+
+    gv = CustomGenomeWiz(tick_style="axis") #this is the main object which tick_style can be a represtation of the genome in bp
+
+    transparent_yellow_ORF = (1,0.7,0.4,0.8) 
+    transparent_red_ORF= (1, 0.5, 0.5, 0.8)  
+    transparent_yellow_domains = (1, 1, 0.6, 0.4)  
+    blue_exons = (0, 0, 0.8, 1)  # 100% blue
+
+    #for each transcript generate a track
+    for transcript in transcripts:
+        track = gv.add_feature_track(name=transcript, start_pos=start_genomic_region_of_transcript, size=absolut) 
+        exons = get_exons_from_transcript_id(transcript)
+        exon_regions = []
+        for j in exons:
+            start_exon = j[0]
+            end_exon = j[1]
+            strand = j[3]
+            exon_regions.append((start_exon, end_exon))
+            if strand=='-':
+                track.add_exon_feature(exon_regions, strand=1, plotstyle="box", facecolor=blue_exons, linewidth=0, labelrotation=0, labelha="center", intron_patch_kws={"ec": (0.8, 0.8, 0.8)} )
+            else:
+                track.add_exon_feature(exon_regions, strand=-1, plotstyle="box", facecolor=blue_exons, linewidth=0, labelrotation=0, labelha="center", intron_patch_kws={"ec": (0.8, 0.8, 0.8)} )
+
+        start_pos, end_pos, orf_start_in_genome, orf_end_in_genome = find_longest_ORF(transcript)
+        
+        if start_pos!=None:
+            if orf_end_in_genome<orf_start_in_genome:
+                tmp = orf_end_in_genome
+                orf_end_in_genome = orf_start_in_genome
+                orf_start_in_genome = tmp
+                track.add_feature(orf_start_in_genome, orf_end_in_genome, strand=-1, plotstyle="arrow", \
+                                facecolor=transparent_red_ORF if str(transcript).startswith("NSTRG") else transparent_yellow_ORF, linewidth=0.5, labelrotation=0, labelha="center")
+            else:
+                track.add_feature(orf_start_in_genome, orf_end_in_genome, strand=1, plotstyle="arrow", \
+                               facecolor=transparent_red_ORF if str(transcript).startswith("NSTRG") else transparent_yellow_ORF, linewidth=0.5, labelrotation=0, labelha="center")
+
+        domains = find_domains_from_database(transcript)
+        if domains not in ([], None):
+            for domain in domains:
+                domain_name = domain[1]
+                start_domain_on_cDNA = int(domain[2])
+                end_domain_on_cDNA = int(domain[3])
+                positions_of_exons_in_cDNA = get_cDNA_pos_of_each_exon(exons)
+                for i in positions_of_exons_in_cDNA:
+                    if start_domain_on_cDNA >= i[2] and start_domain_on_cDNA <= i[3]:
+                        domain_start_in_genome = i[0] + start_domain_on_cDNA-i[2]
+                    if end_domain_on_cDNA >= i[2] and end_domain_on_cDNA <= i[3]:
+                        domain_end_in_genome = i[0] + end_domain_on_cDNA-i[2]
+                if strand=='-':
+                    track.add_feature(domain_start_in_genome, domain_end_in_genome, strand=-1, plotstyle="rbox", \
+                                    facecolor=transparent_yellow_domains, linewidth=1, labelha="left", labelrotation=20, label=domain_name, labelsize=0)                 
+                    for feature in track.features:
+                        if feature.facecolor == transparent_yellow_domains:  # Assuming 'rbox' is unique to domain features
+                            feature.tooltip = generate_custom_tooltip(feature)
+                else:
+                    track.add_feature(domain_start_in_genome, domain_end_in_genome, strand=1, plotstyle="rbox", \
+                                    facecolor=transparent_yellow_domains, linewidth=1, labelha="left", labelrotation=20, label=domain_name, labelsize=0)                 
+                    for feature in track.features:
+                        if feature.facecolor == transparent_yellow_domains:  # Assuming 'rbox' is unique to domain features
+                            feature.tooltip = generate_custom_tooltip(feature)
+
+    gv.plotfig()  # Generate the figure
+    #print time
+    print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    html_string = gv.savefig_html(file_path, return_html_string=True)
+    #print time
+    print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print("--Generate interactive svg done--")
+    return html_string
+
+def generate_custom_tooltip(feature):
+    # Custom logic to generate tooltip text
+    strand = "-" if feature.strand == -1 else "+"
+    tooltip_text = f"location: {feature.start} - {feature.end} ({strand})\ndomain: {feature.label}"
+    return tooltip_text    
+
+class CustomGenomeWiz(GenomeViz):
+
+    def savefig_html(
+        self,
+        html_outfile: str | Path | io.StringIO | io.BytesIO | None = None,
+        fig: Figure | None = None,
+        return_html_string: bool = False
+    ) -> Union[None, str]:
+        """Save figure in html format or return as a string
+
+        Parameters
+        ----------
+        html_outfile : str | Path | StringIO | BytesIO | None
+            Output HTML file (*.html). If None, the HTML string is returned.
+        fig : Figure | None, optional
+            If Figure set, plot html viewer using user customized fig
+        return_html_string : bool, optional
+            If True, return the HTML content as a string instead of writing to a file
+        """
+        
+        # Load SVG contents
+        if fig is None:
+            fig = self.plotfig()
+        svg_bytes = io.BytesIO()
+        fig.savefig(fname=svg_bytes, format="svg")
+        svg_bytes.seek(0)
+        svg_contents = svg_bytes.read().decode("utf-8")
+
+        # Setup viewer html SVG contents
+        with open(TEMPLATE_HTML_FILE) as f:
+            viewer_html = f.read()
+        viewer_html = viewer_html.replace("$PGV_SVG_FIG", f"\n{svg_contents}")
+        viewer_html = viewer_html.replace("$VERSION", __version__)
+        datetime_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        viewer_html = viewer_html.replace("$DATETIME_NOW", datetime_now)
+
+            # Setup viewer html assets contents
+        style_contents, script_contents = "\n", "\n"
+        for file in ASSETS_FILES:
+            with open(file) as f:
+                contents = f.read()
+            if file.suffix == ".css":
+                style_contents += contents + "\n"
+            elif file.suffix == ".js":
+                script_contents += contents + "\n"
+        feature_tooltip_json = json.dumps(self.gid2feature_tooltip, indent=4)
+        script_contents = script_contents.replace(
+            "FEATURE_TOOLTIP_JSON = {}",
+            f"FEATURE_TOOLTIP_JSON = {feature_tooltip_json}",
+        )
+        link_tooltip_json = json.dumps(self.gid2link_tooltip, indent=4)
+        script_contents = script_contents.replace(
+            "LINK_TOOLTIP_JSON = {}",
+            f"LINK_TOOLTIP_JSON = {link_tooltip_json}",
+        )
+        viewer_html = viewer_html.replace(
+                "<style></style>", f"<style>{style_contents}</style>"
+            )
+        viewer_html = viewer_html.replace(
+                "<script></script>", f"<script>{script_contents}</script>"
+            )
+
+        # Return or write viewer html contents
+        if return_html_string:
+            return viewer_html
+        elif isinstance(html_outfile, io.StringIO):
+            html_outfile.write(viewer_html)
+        elif isinstance(html_outfile, io.BytesIO):
+            html_outfile.write(bytes(viewer_html, encoding="utf-8"))
+        elif html_outfile is not None:
+            with open(html_outfile, "w") as f:
+                f.write(viewer_html)
+
 
 def generate_svg(transcripts, position_mut=None):
     """Generates a svg for a transcript variants of the list transcripts.
@@ -1424,6 +1606,13 @@ card1 = dbc.Card([
         dbc.Row([
             dbc.Col([html.P(id='no-groups-warning',style={'color':'red'}),])
         ]),
+        # html.Div(
+        # children=[
+        #     html.Iframe(
+        #         src=app.get_asset_url("savedplot.html"),
+        #         style={"height": "1067px", "width": "100%"},
+        #     )
+        # ]),
         #position part
         dbc.Row([
             dbc.Col([
@@ -1475,6 +1664,16 @@ card1 = dbc.Card([
                 dbc.Col([html.Br()]),
                 dbc.Col([html.Div(html.Img(id="gene-png", width="100%"))],width=12),
             ]), 
+            dbc.Row([
+                dbc.Col([
+                    html.Div([
+                        html.Iframe(
+                            id='transcript-plot-iframe',
+                        )  
+                    ], 
+                    id="transcript-plot")
+                ], width=12),
+                ]),
             dbc.Row([
                 dbc.Col([
                     html.Div(
@@ -2294,7 +2493,9 @@ def run_sql_statement(n_clicks, value):
     Output('heatmap-relatives','figure'),
     Output('heatmap-relatives-div','style'), 
     Output('heatmap-absolutes','figure'), 
-    Output('heatmap-absolutes-div','style')],
+    Output('heatmap-absolutes-div','style'),
+    Output('transcript-plot-iframe','srcDoc'),
+    Output('transcript-plot-iframe','style')],
     [Input('transcript-button', 'n_clicks'),
      Input('update-button', 'n_clicks')], 
     [State('my-dynamic-dropdown', 'value'), 
@@ -2347,11 +2548,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         if input_value is None: #if input gene is none 
             print("--input gene None--")
             raise exceptions.PreventUpdate
-        elif tissue_dropdown is not None:
-            # input_value = input_value.split(" ")[0]
+        elif tissue_dropdown is not None: 
             print("--across tissues--")
             cur = con.cursor()
-            #get gene id
             statement = "SELECT DISTINCT t.gene_id FROM transcripts as t WHERE t.ref_gene_id=?"
             res = cur.execute(statement, [input_value])
             df_result = pd.DataFrame(res.fetchall())
@@ -2372,10 +2571,11 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"], mutation)
 
+            iframe = generate_interactive_svg(result_df["transcript_id"], triggered_id, mutation)
             #add nhref for each transcript_id in NCBI
             columns, data = transform_to_columns_and_data(result_df)
             
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
             # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
@@ -2392,15 +2592,19 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 df.columns = ["gene_name","gene_id","transcript_id"]
                 #sort df by transcript_id
                 df = df.sort_values(by=['transcript_id'])
-                columns, data = transform_to_columns_and_data(df)
+                columns, data = transform_to_columns_and_data(df, False)
 
                 con.close()
                 start, stop, chrom, strand, drawing = generate_svg(transcripts,mutation)
+
+                iframe = generate_interactive_svg(df["transcript_id"], triggered_id, mutation)
+
+
                 return (data, columns, b64_svg(drawing), "No groups selected! The transcripts \
                         shown here are possible variants resulting from all analyzed datasets (a list of all datasets see 'info').\
                          This means the user sees a global, unified set of transcripts across multiple RNA-Seq samples.\
                          To compare the quantification (TPM) of transcript-variants per tissue or sample, \
-                        select the corresponding groups.", start, stop, chrom, strand, None, None, {'display': 'none'}, None, {'display': 'none'})
+                        select the corresponding groups.", start, stop, chrom, strand, None, None, {'display': 'none'}, None, {'display': 'none'}, iframe, {"width": "100%", "height": "1080px"})
 
             else: #if user did select group then present calculate avg tpm and fpkm from groupA and groupB
                 print("--groups selected--")
@@ -2431,13 +2635,14 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 df_result = df_result.sort_values(by=['transcript_id'])
                 heatmap_rel = generate_heatmap(df_result, True)
                 heatmap_abs = generate_heatmap(df_result, False)
+                iframe = generate_interactive_svg(df_result["transcript_id"], triggered_id, mutation)
 
                 columns, data = transform_to_columns_and_data(result_df)
                         
                 con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
-                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
+                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
@@ -2448,7 +2653,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             print(transcripts)
             if transcripts.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'}, None, None)
             #get list of transcript_id from transcripts
             transcript_ids = transcripts["transcript_id"]
             # for gene_id in set(transcripts["gene_id"]):
@@ -2462,13 +2667,14 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
+            iframe = generate_interactive_svg(df_results["transcript_id"], triggered_id, mutation)
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
             df_result = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if df_result.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'})
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'}, None, None)
             #sort df_result by transcript_id
             df_result = df_result.sort_values(by=['transcript_id'])
             columns, data = transform_to_columns_and_data(result_df)
@@ -2477,13 +2683,13 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
-                    
-            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
+            iframe = generate_interactive_svg(df_result["transcript_id"], triggered_id, mutation)
+            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'}, iframe, {"width": "100%", "height": "1080px"})
         else:
             print("--groups selected--")
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if transcripts.empty:
-                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
+                return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'}, None, None)
             print(transcripts)
             transcript_ids = transcripts["transcript_id"]
             df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
@@ -2494,11 +2700,14 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
+            iframe = generate_interactive_svg(df_result["transcript_id"], triggered_id, mutation)
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
 
 # start the server of the  app
 server = app.server 
 
 # run the app
 if __name__ == '__main__':
+    # generate_interactive_svg(["NM_145290.4", "NR_037877.1","NSTRG.61571.1","NSTRG.61571.2","NSTRG.61571.4","NSTRG.61571.5"], 1)
+    # generate_interactive_svg(["NM_001083909.2","NM_001291085.1","NSTRG.11839.1","NSTRG.11839.6"])
     app.run_server(debug=True)
