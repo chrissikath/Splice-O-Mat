@@ -37,7 +37,8 @@ from matplotlib.figure import Figure
 from pathlib import Path
 import io
 from typing import Union
-
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 
 #################### 1.0 Helper Functions ############################
 ####### configuration #######
@@ -391,7 +392,7 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
     start_genomic_region_of_transcript, end_genomic_region_of_transcript,y = get_start_and_end_genomic_region(transcripts)
     absolut = (end_genomic_region_of_transcript-start_genomic_region_of_transcript)
 
-    gv = CustomGenomeWiz(tick_style="axis") #this is the main object which tick_style can be a represtation of the genome in bp
+    gv = CustomGenomeWiz(tick_style="axis", fig_track_height=0.5) #this is the main object which tick_style can be a represtation of the genome in bp
 
     transparent_yellow_ORF = (1,0.7,0.4,0.8) 
     transparent_red_ORF= (1, 0.5, 0.5, 0.8)  
@@ -450,8 +451,18 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
                     for feature in track.features:
                         if feature.facecolor == transparent_yellow_domains:  # Assuming 'rbox' is unique to domain features
                             feature.tooltip = generate_custom_tooltip(feature)
+    fig = gv.plotfig()    
 
-    gv.plotfig()  # Generate the figure
+    # Definiere die Handles für die Legende
+    handles = [
+        Patch(color=(1, 0.5, 0.5, 0.8), label="Red - displays the longest ORF for a potentially new transcript (NSTRG), might not be the 'true' one"),
+        Patch(color=(1, 0.7, 0.4, 0.8), label="Orange - displays the longest ORF for the transcript, might not be the 'true' one"),
+        Patch(color=(1, 1, 0.6, 0.4), label="Yellow - domains predicted for each ORF"),
+        # Füge hier weitere Farben und ihre Beschreibungen hinzu, falls notwendig
+    ]
+
+    # Füge die Legende zur Figur hinzu
+    legend = fig.legend(handles=handles, loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
     #print time
     print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     html_string = gv.savefig_html(file_path, return_html_string=True)
@@ -1606,13 +1617,6 @@ card1 = dbc.Card([
         dbc.Row([
             dbc.Col([html.P(id='no-groups-warning',style={'color':'red'}),])
         ]),
-        # html.Div(
-        # children=[
-        #     html.Iframe(
-        #         src=app.get_asset_url("savedplot.html"),
-        #         style={"height": "1067px", "width": "100%"},
-        #     )
-        # ]),
         #position part
         dbc.Row([
             dbc.Col([
@@ -1662,8 +1666,25 @@ card1 = dbc.Card([
             ]),
             dbc.Row([
                 dbc.Col([html.Br()]),
-                dbc.Col([html.Div(html.Img(id="gene-png", width="100%"))],width=12),
+                dbc.Col([html.Div(html.Img(id="gene-png", width="100%"), style={"display":"none"})],width=12),
             ]), 
+            dbc.Row([
+                dbc.Col([
+                    html.P([
+                        html.Span("Red - ", style={'color': 'rgba(255, 77, 77, 0.8)'}),
+                        "displays the longest ORF for a potentially new transcript (NSTRG), might not be the 'true' one.",
+                        html.Br(),
+                        html.Span("Orange - ", style={'color': 'rgba(255, 140, 0, 0.8)'}),
+                        "displays the longest ORF for the transcript, might not be the 'true' one.",
+                        html.Br(),
+                        html.Span("Yellow - ", style={'color': 'rgba(204, 204, 0, 0.6)'}),
+                        "domains predicted for each ORF.",
+                        html.Br(),
+                        html.Span("Blue - ", style={'color': 'rgba(0, 0, 204, 1)'}),
+                        "represent exons in the genomic sequence."
+                    ], style={'margin-bottom': '20px'})  # Anpassung des Abstandes zum Iframe
+                ], width=12),
+            ]),
             dbc.Row([
                 dbc.Col([
                     html.Div([
@@ -2575,7 +2596,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             #add nhref for each transcript_id in NCBI
             columns, data = transform_to_columns_and_data(result_df)
             
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%","height":"600px"})
             # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
@@ -2604,7 +2625,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                         shown here are possible variants resulting from all analyzed datasets (a list of all datasets see 'info').\
                          This means the user sees a global, unified set of transcripts across multiple RNA-Seq samples.\
                          To compare the quantification (TPM) of transcript-variants per tissue or sample, \
-                        select the corresponding groups.", start, stop, chrom, strand, None, None, {'display': 'none'}, None, {'display': 'none'}, iframe, {"width": "100%", "height": "1080px"})
+                        select the corresponding groups.", start, stop, chrom, strand, None, None, {'display': 'none'}, None, {'display': 'none'}, iframe, {"width": "100%","height":"600px"})
 
             else: #if user did select group then present calculate avg tpm and fpkm from groupA and groupB
                 print("--groups selected--")
@@ -2642,7 +2663,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
-                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
+                return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%","height":"600px"})
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
@@ -2668,7 +2689,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
             iframe = generate_interactive_svg(df_results["transcript_id"], triggered_id, mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%","height":"600px"})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
@@ -2684,7 +2705,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             data = df_result.to_dict('records')
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
             iframe = generate_interactive_svg(df_result["transcript_id"], triggered_id, mutation)
-            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'}, iframe, {"width": "100%", "height": "1080px"})
+            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'}, iframe, {"width": "100%","height":"600px"})
         else:
             print("--groups selected--")
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
@@ -2701,7 +2722,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_abs = generate_heatmap(df_result, False)
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
             iframe = generate_interactive_svg(df_result["transcript_id"], triggered_id, mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%", "height": "1080px"})
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%","height":"600px"})
 
 # start the server of the  app
 server = app.server 
