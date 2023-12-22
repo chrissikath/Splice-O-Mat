@@ -392,13 +392,14 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
     start_genomic_region_of_transcript, end_genomic_region_of_transcript,y = get_start_and_end_genomic_region(transcripts)
     absolut = (end_genomic_region_of_transcript-start_genomic_region_of_transcript)
 
-    gv = CustomGenomeWiz(tick_style="axis", fig_track_height=0.5) #this is the main object which tick_style can be a represtation of the genome in bp
+    gv = CustomGenomeWiz(tick_style="axis", fig_track_height=0.2) #this is the main object which tick_style can be a represtation of the genome in bp
 
     transparent_yellow_ORF = (1,0.7,0.4,0.8) 
     transparent_red_ORF= (1, 0.5, 0.5, 0.8)  
-    transparent_yellow_domains = (1, 1, 0.6, 0.4)  
+    transparent_yellow_domains = (1, 1, 0.6, 0.2)  
     blue_exons = (0, 0, 0.8, 1)  # 100% blue
 
+    first_transcript = 0
     #for each transcript generate a track
     for transcript in transcripts:
         track = gv.add_feature_track(name=transcript, start_pos=start_genomic_region_of_transcript, size=absolut) 
@@ -408,12 +409,10 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
             start_exon = j[0]
             end_exon = j[1]
             strand = j[3]
+            strand_gw = -1 if strand == "-" else 1
             exon_regions.append((start_exon, end_exon))
-            if strand=='-':
-                track.add_exon_feature(exon_regions, strand=1, plotstyle="box", facecolor=blue_exons, linewidth=0, labelrotation=0, labelha="center", intron_patch_kws={"ec": (0.8, 0.8, 0.8)} )
-            else:
-                track.add_exon_feature(exon_regions, strand=-1, plotstyle="box", facecolor=blue_exons, linewidth=0, labelrotation=0, labelha="center", intron_patch_kws={"ec": (0.8, 0.8, 0.8)} )
-
+            track.add_exon_feature(exon_regions, strand=strand_gw, plotstyle="bigbox", facecolor=blue_exons, linewidth=0, labelrotation=0, labelha="center", intron_patch_kws={"ec": (1,1,1,0)} )
+            
         start_pos, end_pos, orf_start_in_genome, orf_end_in_genome = find_longest_ORF(transcript)
         
         if start_pos!=None:
@@ -421,15 +420,17 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
                 tmp = orf_end_in_genome
                 orf_end_in_genome = orf_start_in_genome
                 orf_start_in_genome = tmp
-                track.add_feature(orf_start_in_genome, orf_end_in_genome, strand=-1, plotstyle="arrow", \
-                                facecolor=transparent_red_ORF if str(transcript).startswith("NSTRG") else transparent_yellow_ORF, linewidth=0.5, labelrotation=0, labelha="center")
+                track.add_feature(orf_start_in_genome, orf_end_in_genome, strand=strand_gw, plotstyle="bigarrow", \
+                                facecolor=transparent_red_ORF if str(transcript).startswith("NSTRG") else transparent_yellow_ORF, linewidth=0, labelrotation=0, labelha="center")
             else:
-                track.add_feature(orf_start_in_genome, orf_end_in_genome, strand=1, plotstyle="arrow", \
-                               facecolor=transparent_red_ORF if str(transcript).startswith("NSTRG") else transparent_yellow_ORF, linewidth=0.5, labelrotation=0, labelha="center")
+                track.add_feature(orf_start_in_genome, orf_end_in_genome, strand=strand_gw, plotstyle="bigarrow", \
+                               facecolor=transparent_red_ORF if str(transcript).startswith("NSTRG") else transparent_yellow_ORF, linewidth=0, labelrotation=0, labelha="center")
 
         domains = find_domains_from_database(transcript)
         if domains not in ([], None):
             for domain in domains:
+                if transcript=="NSTRG.20613.20":
+                        continue
                 domain_name = domain[1]
                 start_domain_on_cDNA = int(domain[2])
                 end_domain_on_cDNA = int(domain[3])
@@ -439,18 +440,35 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
                         domain_start_in_genome = i[0] + start_domain_on_cDNA-i[2]
                     if end_domain_on_cDNA >= i[2] and end_domain_on_cDNA <= i[3]:
                         domain_end_in_genome = i[0] + end_domain_on_cDNA-i[2]
-                if strand=='-':
-                    track.add_feature(domain_start_in_genome, domain_end_in_genome, strand=-1, plotstyle="rbox", \
+                
+                if domain_end_in_genome<domain_start_in_genome:
+                        tmp = domain_end_in_genome
+                        domain_end_in_genome = domain_start_in_genome
+                        domain_start_in_genome = tmp
+                
+                track.add_feature(domain_start_in_genome, domain_end_in_genome, strand=strand_gw, plotstyle="bigrbox", \
                                     facecolor=transparent_yellow_domains, linewidth=1, labelha="left", labelrotation=20, label=domain_name, labelsize=0)                 
-                    for feature in track.features:
-                        if feature.facecolor == transparent_yellow_domains:  # Assuming 'rbox' is unique to domain features
-                            feature.tooltip = generate_custom_tooltip(feature)
-                else:
-                    track.add_feature(domain_start_in_genome, domain_end_in_genome, strand=1, plotstyle="rbox", \
-                                    facecolor=transparent_yellow_domains, linewidth=1, labelha="left", labelrotation=20, label=domain_name, labelsize=0)                 
-                    for feature in track.features:
-                        if feature.facecolor == transparent_yellow_domains:  # Assuming 'rbox' is unique to domain features
-                            feature.tooltip = generate_custom_tooltip(feature)
+                 
+        #draw mutation position in svg
+        if first_transcript==0:
+            labelsize=15
+        else:
+            labelsize=0
+        if position_mut!=None and position_mut!='':
+            positions_mut = position_mut.split(",")
+            for pos in positions_mut:
+                print("HERE",pos)
+                feature_size_percentage = 0.15  # Adjust this value as needed
+                feature_size = (absolut * feature_size_percentage) / 100
+                track.add_feature(int(pos), int(pos)+feature_size, strand=strand_gw, plotstyle="bigbox", \
+                                    facecolor='red', linewidth=0, labelrotation=0,  label="mutation", labelsize=labelsize, labelvpos="top", labelhpos="center", labelha="center")
+
+        for feature in track.features:
+            if feature.plotstyle == "bigrbox":  # Assuming 'rbox' is unique to domain features
+                feature.tooltip = generate_custom_tooltip(feature)
+
+        first_transcript+=1
+
     fig = gv.plotfig()    
 
     # Definiere die Handles für die Legende
@@ -466,6 +484,13 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
     #print time
     print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     html_string = gv.savefig_html(file_path, return_html_string=True)
+    
+    if "<style>" in html_string:
+        # Füge den neuen Stil zum bestehenden <style>-Tag hinzu
+        html_string = html_string.replace("<style>", "<style>.header-container { display: none; } ")
+    else:
+        # Füge einen neuen <style>-Tag mit dem Stil hinzu
+        html_string = html_string.replace("</head>", "<style>.header-container { display: none; }</style></head>")
     #print time
     print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print("--Generate interactive svg done--")
@@ -1672,16 +1697,16 @@ card1 = dbc.Card([
                 dbc.Col([
                     html.P([
                         html.Span("Red - ", style={'color': 'rgba(255, 77, 77, 0.8)'}),
-                        "displays the longest ORF for a potentially new transcript (NSTRG), might not be the 'true' one.",
+                        "displays the longest predicted ORF for a potentially new transcript (NSTRG, not already annotated in the NCBI annotation), might not be the 'true' one.",
                         html.Br(),
                         html.Span("Orange - ", style={'color': 'rgba(255, 140, 0, 0.8)'}),
-                        "displays the longest ORF for the transcript, might not be the 'true' one.",
+                        "displays the longest predicted ORF for the transcript, might not be the 'true' one.",
                         html.Br(),
                         html.Span("Yellow - ", style={'color': 'rgba(204, 204, 0, 0.6)'}),
-                        "domains predicted for each ORF.",
+                        "domains predicted based on the ORF.",
                         html.Br(),
                         html.Span("Blue - ", style={'color': 'rgba(0, 0, 204, 1)'}),
-                        "represent exons in the genomic sequence."
+                        "represent exons of the transcript.",
                     ], style={'margin-bottom': '20px'})  # Anpassung des Abstandes zum Iframe
                 ], width=12),
             ]),
@@ -1975,7 +2000,7 @@ card4 = dbc.Card([
     dbc.CardHeader("Info", style={"font-size": "24px"}),
     dbc.CardBody([          
         html.P("We obtained three brain tissue dataset (GSE173955, GSE182321, GSE101521), one liver tissue dataset (GSE174478), one heart tissue dataset (GSE165303), one kidney tissue dataset (GSE217427) and one dataset including 45 different tissues types (GSE138734) from the Gene Expression Omnibus (GEO) public dataset. We further obtained one melanoma cancer dataset (PRJEB23709) from the European Nucleotide Archive. Only paired-end RNA-seq samples were included and datasets generated without random primers were excluded. The raw data was mapped against the hg38 human genome using STAR (version 2.7.6a) with default parameters. After indexing with samtools (version 1.9) the mapped reads were assembled to transcripts and quantified by StringTie (version v2.1.3b). StringTie parameters ‘read coverage’ (-c), ‘transcript length’ (-m) and ‘bases on both sides of a junction a spliced read has to cover’ (-a) were set to minimal values in order to avoid missing transcripts and generating a bias. The parameter ‘fraction of most abundant transcript at one locus’ (-f) was lowered from default (0.01) to 0. For all other StringTie parameters default values were used. To generate a global, unified set of transcripts across all three RNA-Seq samples, StringTie merge mode with providing the reference annotation (-G) was used. Quantification of abundance of the input transcripts was then performed using parameters ‘expression estimation mode’ (-e) with parameters ‘ballgown output’ (-B) and the beforehand generated ‘reference annotation transcripts’ (-G)."),
-        html.P("Annotated transcripts are labeled with their RefSeq accessions: NM = Protein-coding transcripts (usually curated), NR = Non-protein-coding transcripts, XM = Predicted model protein-coding transcript, XR = Predicted model non-protein-coding transcript. Potential new transcripts assigned by Stringtie (not in the NCBI hg38 genome annotation) are annotated with 'NSTR'"),
+        html.P("Annotated transcripts are labeled with their RefSeq accessions: NM = Protein-coding transcripts (usually curated), NR = Non-protein-coding transcripts, XM = Predicted model protein-coding transcript, XR = Predicted model non-protein-coding transcript. Potential new transcripts assigned by Stringtie (not in the NCBI hg38 genome annotation) are annotated with 'NSTRG'"),
         html.P("The webtool was created by Christina Kuhn. For questions and suggestions please contact christina.kuhn@medizin.uni-leipzig.de")
     ]),
 ])
@@ -2658,7 +2683,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 heatmap_abs = generate_heatmap(df_result, False)
                 iframe = generate_interactive_svg(df_result["transcript_id"], triggered_id, mutation)
 
-                columns, data = transform_to_columns_and_data(result_df)
+                columns, data = transform_to_columns_and_data(df_result)
                         
                 con.close()
                 print("Average TPM calcuated")
@@ -2683,7 +2708,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             heatmap_rel = generate_heatmap(df_results, True)
             heatmap_abs = generate_heatmap(df_results, False)
             
-            columns, data = transform_to_columns_and_data(result_df)
+            columns, data = transform_to_columns_and_data(df_results)
 
             con.close()
             print("Average TPM calcuated")
@@ -2698,7 +2723,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'}, None, None)
             #sort df_result by transcript_id
             df_result = df_result.sort_values(by=['transcript_id'])
-            columns, data = transform_to_columns_and_data(result_df)
+            columns, data = transform_to_columns_and_data(df_result)
 
 
             columns = [{"name": i, "id":i } for i in df_result.columns]
@@ -2716,7 +2741,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
             df_result = calculate_percentage_for_TPM(df_result)
             df_result = df_result.sort_values(by=['transcript_id'])
-            columns, data = transform_to_columns_and_data(result_df)
+            columns, data = transform_to_columns_and_data(df_result)
 
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
