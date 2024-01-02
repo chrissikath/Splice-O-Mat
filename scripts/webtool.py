@@ -32,6 +32,10 @@ from pygenomeviz.feature import Feature
 from dataclasses import dataclass
 from pygenomeviz import __version__
 from pygenomeviz.config import ASSETS_FILES, TEMPLATE_HTML_FILE
+from pygenomeviz.track import FeatureSubTrack, FeatureTrack, LinkTrack, TickTrack, Track
+from matplotlib import colors, gridspec
+from matplotlib.axes import Axes
+from matplotlib.ticker import MaxNLocator
 import textwrap
 from matplotlib.figure import Figure
 from pathlib import Path
@@ -39,6 +43,8 @@ import io
 from typing import Union
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+import cProfile
+
 
 #################### 1.0 Helper Functions ############################
 ####### configuration #######
@@ -281,9 +287,7 @@ def find_domains_from_database(longest_transcript):
 
     Returns:
         domains (list): list of domains (transcript_id, domain, start_on_cDNA, end_on_cDNA)
-    """
-    print("--Find domains from database--")
-    
+    """    
     #get domains from database
     statement = "SELECT d.domain, d.start, d.end FROM domains as d, transcripts as t WHERE t.id=d.transcript AND t.transcript_id=?"
     con = create_connection()
@@ -469,18 +473,6 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
 
         first_transcript+=1
 
-    fig = gv.plotfig()    
-
-    # Definiere die Handles für die Legende
-    handles = [
-        Patch(color=(1, 0.5, 0.5, 0.8), label="Red - displays the longest ORF for a potentially new transcript (NSTRG), might not be the 'true' one"),
-        Patch(color=(1, 0.7, 0.4, 0.8), label="Orange - displays the longest ORF for the transcript, might not be the 'true' one"),
-        Patch(color=(1, 1, 0.6, 0.4), label="Yellow - domains predicted for each ORF"),
-        # Füge hier weitere Farben und ihre Beschreibungen hinzu, falls notwendig
-    ]
-
-    # Füge die Legende zur Figur hinzu
-    legend = fig.legend(handles=handles, loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
     #print time
     print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     html_string = gv.savefig_html(file_path, return_html_string=True)
@@ -504,6 +496,103 @@ def generate_custom_tooltip(feature):
 
 class CustomGenomeWiz(GenomeViz):
 
+    def plotfig_faster(self, dpi: int = 100) -> Figure:
+        if len(self.get_tracks()) == 0:
+            raise ValueError("No tracks are defined for plotting figure.")
+        
+        tracks = self.get_tracks()
+        subtracks = self.get_tracks(subtrack=True)
+        plot_length_thr = self.max_track_size * self.plot_size_thr
+        
+        # Calculate height ratios once
+        height_ratios = [t.ratio for t in subtracks]
+        avg_height_ratio = sum(height_ratios) / len(height_ratios)
+        
+        # Calculate tick track parameters once
+        if self.tick_style == "bar":
+            tick_xmin = self._get_track_offset(self._tracks[-1])
+            tick_xmax = tick_xmin + self.max_track_size
+            tick_ymin = self._tracks[-1].ymin
+            tick_ymax = self._tracks[-1].ymax
+        
+        figsize = (self.fig_width, self.fig_track_height * len(subtracks))
+        tight_layout = len(subtracks) >= 3
+        figure: Figure = plt.figure(
+            figsize=figsize, facecolor="white", dpi=dpi, tight_layout=tight_layout
+        )
+        
+        gs = gridspec.GridSpec(nrows=len(subtracks), ncols=1, height_ratios=height_ratios)
+        gs.update(left=0, right=1, bottom=0, top=1, hspace=0, wspace=0)
+
+        for idx, track in enumerate(subtracks):
+            xlim, ylim = (0, self.max_track_size), track.ylim
+            ax: Axes = figure.add_subplot(
+                gs[idx], xlim=xlim, ylim=ylim, fc="none", zorder=track.zorder
+            )
+            
+            if not isinstance(ax, Axes):
+                raise TypeError("Error: Not matplotlib Axes class instance.")
+            
+            ax.set_gid(f"{track.__class__.__name__}{idx:02d}")
+            track_offset = self._get_track_offset(track)
+            track._ax, track._offset = ax, track_offset
+            
+            for spine, display in track.spines_params.items():
+                ax.spines[spine].set_visible(display)
+            
+            ax.tick_params(**track.tick_params)
+            
+            if isinstance(track, FeatureTrack):
+                ax.set_gid(str(ax.get_gid()) + f" {track})")
+                xmin, xmax = track_offset, track.size + track_offset
+                ax.hlines(0, xmin, xmax, track.linecolor, linewidth=track.linewidth)
+                
+                if track.labelsize != 0:
+                    margin = -self.max_track_size * track.labelmargin
+                    ax.text(margin, 0, **track.label_params)
+                
+                if track._sublabel_text is not None and track._sublabel_size != 0:
+                    ha2x = dict(left=xmin, center=(xmax + xmin) / 2, right=xmax)
+                    x = ha2x[track._sublabel_ha]
+                    ax.text(**{**dict(x=x), **track.sublabel_params})
+                
+                feature_offset = track_offset - track.start
+                features_to_plot = [f + feature_offset for f in track.features if f.length >= plot_length_thr]
+                
+                for feature in features_to_plot:
+                    feature.plot_feature(ax, self.max_track_size, ylim)
+                    feature.plot_label(ax, ylim)
+            
+            elif isinstance(track, LinkTrack):
+                links_to_plot = [
+                    link.add_offset(self.track_name2link_offset)
+                    for link in track.links
+                    if not (
+                        0 < link.track_length1 < plot_length_thr
+                        or 0 < link.track_length2 < plot_length_thr
+                    )
+                ]
+                
+                for link in links_to_plot:
+                    link.plot_link(ax, ylim)
+            
+            elif isinstance(track, TickTrack):
+                if self.tick_style == "axis":
+                    ax.xaxis.set_major_locator(MaxNLocator(10, steps=[1, 2, 5, 10]))
+                    ax.xaxis.set_major_formatter(track.tick_formatter)
+                elif self.tick_style == "bar":
+                    line_kws = {"colors": "black", "linewidth": 1, "clip_on": False}
+                    ax.hlines(tick_ymin, tick_xmin, tick_xmax, **line_kws)
+                    ax.vlines(tick_xmin, tick_ymin, tick_ymax, **line_kws)
+                    ax.vlines(tick_xmax, tick_ymin, tick_ymax, **line_kws)
+                    ax.text(**track.scalebar_text_params)
+            
+            else:
+                raise NotImplementedError()
+        
+        return figure
+
+
     def savefig_html(
         self,
         html_outfile: str | Path | io.StringIO | io.BytesIO | None = None,
@@ -522,11 +611,14 @@ class CustomGenomeWiz(GenomeViz):
             If True, return the HTML content as a string instead of writing to a file
         """
         
+        #print time 
+        print("plotfig")
+        print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         # Load SVG contents
         if fig is None:
             fig = self.plotfig()
         svg_bytes = io.BytesIO()
-        fig.savefig(fname=svg_bytes, format="svg")
+        fig.savefig(fname=svg_bytes, format="svg")  
         svg_bytes.seek(0)
         svg_contents = svg_bytes.read().decode("utf-8")
 
@@ -538,7 +630,7 @@ class CustomGenomeWiz(GenomeViz):
         datetime_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         viewer_html = viewer_html.replace("$DATETIME_NOW", datetime_now)
 
-            # Setup viewer html assets contents
+        # Setup viewer html assets contents
         style_contents, script_contents = "\n", "\n"
         for file in ASSETS_FILES:
             with open(file) as f:
@@ -865,7 +957,7 @@ def get_proteins(ref_gene_id):
         cDNA_dict = get_cDNA(df["transcript_id"])
         
         for transcript in cDNA_dict:
-            print("transcript: %s" % transcript)
+            # print("transcript: %s" % transcript)
             cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
             # print("cDNA_string: %s" % cDNA_Seq)
             start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
@@ -873,7 +965,7 @@ def get_proteins(ref_gene_id):
                 print("No ORF found")
                 proteins[transcript]="No ORF found"
                 continue
-            print("--ORF from %d to %d--" % (start_genome, end_genome))
+            # print("--ORF from %d to %d--" % (start_genome, end_genome))
             if start_genome<=end_genome:
                 proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
             else:
