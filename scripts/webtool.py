@@ -1177,47 +1177,48 @@ card_explanation = dbc.Card([
                 html.Ul([
                     html.Li([
                         html.A(
-                            "Exportable graphics and tables",
-                            href=app.get_asset_url("download/GraphicsAndTables_explanations.png"),
+                            "How to use the app",
+                            href=app.get_asset_url("download/HowTo.png"),
                             target="_blank",
                         )
                     ]),
                     html.Li([
                         html.A(
-                            "Quantitative measures (TPM, percentage of all transcripts)",
-                            href=app.get_asset_url("download/TPMs.png_explanations"),
-                            target="_blank",
-                        )
-                    ]),
-                    html.Li([
-                        html.A(
-                            "All genomic positions of the exons contributing to a transcript",
-                            href=app.get_asset_url("download/ExonStructure_explanations.png"),
-                            target="_blank",
-                        )
-                    ]),
-                    html.Li([
-                        html.A(
-                            "Projection of protein domains on exons",
-                            href=app.get_asset_url("download/Domains_explanations.png"),
+                            "Exportable graphics and tables.",
+                            href=app.get_asset_url("download/GraphicsAndTables.png"),
                             target="_blank",
                         )
                     ]),
                     html.Li([
                         html.A(
                             "Heat-maps for comparisons of tissue specific-expression",
-                            href=app.get_asset_url("download/Heatmap_explanations.png"),
+                            href=app.get_asset_url("download/Heatmaps.png"),
+                            target="_blank",
+                        )
+                    ]),
+                    html.Li([
+                        html.A(
+                            "Projection of protein domains on exons",
+                            href=app.get_asset_url("download/Domains.png"),
                             target="_blank",
                         )
                     ]),
                     html.Li([
                         html.A(
                             "Projection of disease- or phenotype-causing variants on transcript’s exon structure",
-                            href=app.get_asset_url("download/Mutations_explanations.png"),
+                            href=app.get_asset_url("download/Mutations.png"),
+                            target="_blank",
+                        )
+                    ]),
+                    html.Li([
+                        html.A(
+                            "All genomic positions of the exons contributing to a transcript",
+                            href=app.get_asset_url("download/ExonStructure.png"),
                             target="_blank",
                         )
                     ]),
                 ])
+                    
             ], width=5)
 
         ]),
