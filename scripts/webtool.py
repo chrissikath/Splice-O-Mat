@@ -475,7 +475,33 @@ def generate_interactive_svg(transcripts, n_clicks, position_mut=None):
 
     #print time
     print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    html_string = gv.savefig_html(file_path, return_html_string=True)
+    profiler = cProfile.Profile()
+    html_string = profiler.runcall(gv.savefig_html, file_path, return_html_string=True)
+    profiler.dump_stats("profiling_results.prof")
+
+    import pstats
+    import sys
+    import logging
+    stats = pstats.Stats("profiling_results.prof")
+
+    #stats.sort_stats('cumtime')
+
+    # Initialize logging
+    logging.basicConfig(filename='profiling.log', level=logging.INFO)
+    logging.info(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    # Capture the stats output as a string
+    output = io.StringIO()
+    stats.print_stats()
+
+    # Log the statistics
+    logging.info(output.getvalue())
+
+    # Reset stdout
+    sys.stdout = sys.__stdout__
+        
+
+    # html_string = gv.savefig_html(file_path, return_html_string=True)
     
     if "<style>" in html_string:
         # Füge den neuen Stil zum bestehenden <style>-Tag hinzu
@@ -610,14 +636,13 @@ class CustomGenomeWiz(GenomeViz):
         return_html_string : bool, optional
             If True, return the HTML content as a string instead of writing to a file
         """
-        
-        #print time 
-        print("plotfig")
-        print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        print("--Save figure in html format--")
         # Load SVG contents
         if fig is None:
             fig = self.plotfig()
         svg_bytes = io.BytesIO()
+
+    
         fig.savefig(fname=svg_bytes, format="svg")  
         svg_bytes.seek(0)
         svg_contents = svg_bytes.read().decode("utf-8")
