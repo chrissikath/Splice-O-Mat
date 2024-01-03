@@ -1168,7 +1168,7 @@ card_explanation = dbc.Card([
                 html.H6("Video Tutorial: "),
                 html.A(
                     html.Img(src=app.get_asset_url('VideoExplanation.png'), alt='Video Tutorial', style={'width':'100%'}),
-                    href='https://youtu.be/zgZiOQtjWCc?si=wgJ7M4J6ks0nhgKw',
+                    href='https://youtu.be/fMvIgQYDtxs',
                     target='_blank'  # Open the link in a new tab
                 )
             ], width=2),
