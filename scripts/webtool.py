@@ -1122,21 +1122,21 @@ def calculate_inner_exons(gene_id):
     rows = cur.fetchall()
     df = pd.DataFrame(rows, columns=['transcipt_id','sequence_number', 'start', 'end'])
     #generate for each new transcript_id in df a new dataframe
-    df_results = [] 
+    result_df = [] 
     for transcript_id in df['transcipt_id'].unique():
         #get subset of df for transcript_id 
         df_subset = df[df['transcipt_id'] == transcript_id]
         #delete first and last entry in df_subset
         df_subset = df_subset.iloc[1:-1]
-        #add df_subset to df_results
-        df_results.append(df_subset)
+        #add df_subset to result_df
+        result_df.append(df_subset)
 
-    #sort df_results for start and end
-    df_results = pd.concat(df_results)
-    df_results = df_results.sort_values(by=['start', 'end'], ascending=True)
-    #delete row if start and end numbers are the same as for another row in df_results
-    df_results = df_results.drop_duplicates(subset=['start', 'end'], keep='first')
-    number_inner_exons = df_results.shape[0]
+    #sort result_df for start and end
+    result_df = pd.concat(result_df)
+    result_df = result_df.sort_values(by=['start', 'end'], ascending=True)
+    #delete row if start and end numbers are the same as for another row in result_df
+    result_df = result_df.drop_duplicates(subset=['start', 'end'], keep='first')
+    number_inner_exons = result_df.shape[0]
     return number_inner_exons
 
 ################ 2.0 DASH APP #########################
@@ -1488,6 +1488,7 @@ card1 = dbc.Card([
                     html.Div([dcc.Graph(id="heatmap-relatives", responsive=True)], id="heatmap-relatives-div", style={'display':'none'})
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
+
             ]), 
             dbc.Row([html.Br(),]),
             dbc.Row([
@@ -2452,16 +2453,16 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             #get list of transcript_id from transcripts
             transcript_ids = transcripts["transcript_id"]
             # for gene_id in set(transcripts["gene_id"]):
-            df_results = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
+            result_df = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
             #generate heatmap with all tissues and transcripts
-            heatmap_rel = generate_heatmap(df_results, True)
-            heatmap_abs = generate_heatmap(df_results, False)
+            heatmap_rel = generate_heatmap(result_df, True)
+            heatmap_abs = generate_heatmap(result_df, False)
             
             columns, data = transform_to_columns_and_data(result_df)
 
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
+            start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"],mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
