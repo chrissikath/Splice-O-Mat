@@ -1340,21 +1340,21 @@ def calculate_inner_exons(gene_id):
     rows = cur.fetchall()
     df = pd.DataFrame(rows, columns=['transcipt_id','sequence_number', 'start', 'end'])
     #generate for each new transcript_id in df a new dataframe
-    df_results = [] 
+    result_df = [] 
     for transcript_id in df['transcipt_id'].unique():
         #get subset of df for transcript_id 
         df_subset = df[df['transcipt_id'] == transcript_id]
         #delete first and last entry in df_subset
         df_subset = df_subset.iloc[1:-1]
-        #add df_subset to df_results
-        df_results.append(df_subset)
+        #add df_subset to result_df
+        result_df.append(df_subset)
 
-    #sort df_results for start and end
-    df_results = pd.concat(df_results)
-    df_results = df_results.sort_values(by=['start', 'end'], ascending=True)
-    #delete row if start and end numbers are the same as for another row in df_results
-    df_results = df_results.drop_duplicates(subset=['start', 'end'], keep='first')
-    number_inner_exons = df_results.shape[0]
+    #sort result_df for start and end
+    result_df = pd.concat(result_df)
+    result_df = result_df.sort_values(by=['start', 'end'], ascending=True)
+    #delete row if start and end numbers are the same as for another row in result_df
+    result_df = result_df.drop_duplicates(subset=['start', 'end'], keep='first')
+    number_inner_exons = result_df.shape[0]
     return number_inner_exons
 
 ################ 2.0 DASH APP #########################
@@ -1386,7 +1386,7 @@ card_explanation = dbc.Card([
                 html.H6("Video Tutorial: "),
                 html.A(
                     html.Img(src=app.get_asset_url('VideoExplanation.png'), alt='Video Tutorial', style={'width':'100%'}),
-                    href='https://youtu.be/zgZiOQtjWCc?si=wgJ7M4J6ks0nhgKw',
+                    href='https://youtu.be/fMvIgQYDtxs',
                     target='_blank'  # Open the link in a new tab
                 )
             ], width=2),
@@ -1395,47 +1395,48 @@ card_explanation = dbc.Card([
                 html.Ul([
                     html.Li([
                         html.A(
-                            "Exportable graphics and tables",
-                            href=app.get_asset_url("download/GraphicsAndTables_explanations.png"),
+                            "How to use the app",
+                            href=app.get_asset_url("download/HowTo.png"),
                             target="_blank",
                         )
                     ]),
                     html.Li([
                         html.A(
-                            "Quantitative measures (TPM, percentage of all transcripts)",
-                            href=app.get_asset_url("download/TPMs.png_explanations"),
-                            target="_blank",
-                        )
-                    ]),
-                    html.Li([
-                        html.A(
-                            "All genomic positions of the exons contributing to a transcript",
-                            href=app.get_asset_url("download/ExonStructure_explanations.png"),
-                            target="_blank",
-                        )
-                    ]),
-                    html.Li([
-                        html.A(
-                            "Projection of protein domains on exons",
-                            href=app.get_asset_url("download/Domains_explanations.png"),
+                            "Exportable graphics and tables.",
+                            href=app.get_asset_url("download/GraphicsAndTables.png"),
                             target="_blank",
                         )
                     ]),
                     html.Li([
                         html.A(
                             "Heat-maps for comparisons of tissue specific-expression",
-                            href=app.get_asset_url("download/Heatmap_explanations.png"),
+                            href=app.get_asset_url("download/Heatmaps.png"),
+                            target="_blank",
+                        )
+                    ]),
+                    html.Li([
+                        html.A(
+                            "Projection of protein domains on exons",
+                            href=app.get_asset_url("download/Domains.png"),
                             target="_blank",
                         )
                     ]),
                     html.Li([
                         html.A(
                             "Projection of disease- or phenotype-causing variants on transcript’s exon structure",
-                            href=app.get_asset_url("download/Mutations_explanations.png"),
+                            href=app.get_asset_url("download/Mutations.png"),
+                            target="_blank",
+                        )
+                    ]),
+                    html.Li([
+                        html.A(
+                            "All genomic positions of the exons contributing to a transcript",
+                            href=app.get_asset_url("download/ExonStructure.png"),
                             target="_blank",
                         )
                     ]),
                 ])
+                    
             ], width=5)
 
         ]),
@@ -1723,7 +1724,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     html.Div(
-                        dbc.Alert("Attention: For small display size or for high number of transcript variants, heatmap might show only every second transcript and tissue. Please hover over the heatmap for more informtion.", color="danger"),
+                        dbc.Alert("Attention: For small display size or for high number of transcript variants, heatmap might show only every second transcript and tissue. Please hover over the heatmap for more informtion.", color="secondary"),
                         id="display-size-warning")
                 ],width=12),
             ]),
@@ -1733,6 +1734,7 @@ card1 = dbc.Card([
                     html.Div([dcc.Graph(id="heatmap-relatives", responsive=True)], id="heatmap-relatives-div", style={'display':'none'})
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
+
             ]), 
             dbc.Row([html.Br(),]),
             dbc.Row([
@@ -2181,19 +2183,32 @@ def selectAllTissues(n_clicks):
         [State("search-output-ref-geneA", "data")], 
         prevent_initial_call=True
 )
-def download_table_transcripts(n_clicks, data):
+def download_table_transcripts(n_clicks: int, data: list[dict[str, any]]) -> dict[str, str]:
     """Downloads the data in search-output-ref-geneA as a tsv file 
     by clicking on the button btn.
-    # TODO: Check for input type
+
     Args:
         n_clicks (int): number of clicks of button btn
-        data (table): table in search-output-ref-geneA
+        data (list[dict]): table in search-output-ref-geneA
 
     Returns:
         dict: dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
-    """    
+    
+    Raises:
+        ValueError: If data is not in the expected format or 'gene_name' column is missing.
+    """
+    try:
+        df = pd.DataFrame.from_records(data)
+    except ValueError:
+        raise ValueError("Data is not in the expected format (expected a list of dictionaries).")
+
+    if 'gene_name' not in df.columns:
+        raise ValueError("'gene_name' column is missing in the data.")
+
     df = pd.DataFrame.from_records(data)
-    return dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
+    gene_names = df["gene_name"].unique()
+    gene_names = "_".join(gene_names)
+    return dict(content=df.to_csv(sep="\t", index=False),filename=gene_names+"_data.tsv")
 
 @app.callback(
         Output("download-exon", "data"), 
@@ -2692,6 +2707,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
+        # if tissue_dropdown is None:
+        #     print("no tissues selected but update view")
+
         if tissue_dropdown is not None:
             print("--across tissues--")
 
@@ -2703,18 +2721,17 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             #get list of transcript_id from transcripts
             transcript_ids = transcripts["transcript_id"]
             # for gene_id in set(transcripts["gene_id"]):
-            df_results = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
+            df_result = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
             #generate heatmap with all tissues and transcripts
-            heatmap_rel = generate_heatmap(df_results, True)
-            heatmap_abs = generate_heatmap(df_results, False)
+            heatmap_rel = generate_heatmap(df_result, True)
+            heatmap_abs = generate_heatmap(df_result, False)
             
-            columns, data = transform_to_columns_and_data(df_results)
+            columns, data = transform_to_columns_and_data(df_result)
 
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(df_results["transcript_id"],mutation)
-            iframe = generate_interactive_svg(df_results["transcript_id"], triggered_id, mutation)
-            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'}, iframe, {"width": "100%","height":"600px"})
+            start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
+            return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
             print("--no groups selected--")
