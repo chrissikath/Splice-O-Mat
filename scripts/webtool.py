@@ -2443,6 +2443,9 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         
         
     elif triggered_id == 'update-button': #if update-button is triggered
+        # if tissue_dropdown is None:
+        #     print("no tissues selected but update view")
+
         if tissue_dropdown is not None:
             print("--across tissues--")
 
@@ -2454,16 +2457,16 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             #get list of transcript_id from transcripts
             transcript_ids = transcripts["transcript_id"]
             # for gene_id in set(transcripts["gene_id"]):
-            result_df = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
+            df_result = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
             #generate heatmap with all tissues and transcripts
-            heatmap_rel = generate_heatmap(result_df, True)
-            heatmap_abs = generate_heatmap(result_df, False)
+            heatmap_rel = generate_heatmap(df_result, True)
+            heatmap_abs = generate_heatmap(df_result, False)
             
-            columns, data = transform_to_columns_and_data(result_df)
+            columns, data = transform_to_columns_and_data(df_result)
 
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"],mutation)
+            start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
@@ -2473,7 +2476,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'})
             #sort df_result by transcript_id
             df_result = df_result.sort_values(by=['transcript_id'])
-            columns, data = transform_to_columns_and_data(result_df)
+            columns, data = transform_to_columns_and_data(df_result)
 
 
             columns = [{"name": i, "id":i } for i in df_result.columns]
