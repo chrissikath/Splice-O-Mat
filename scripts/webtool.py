@@ -1477,7 +1477,7 @@ card1 = dbc.Card([
             ]),
             dbc.Row([
                 dbc.Col([html.Br()]),
-                dbc.Col([html.Div(html.Img(id="gene-png", width="100%"), style={"display":"none"})],width=12),
+                dbc.Col([html.Div(html.Img(id="gene-png", width="100%"))],width=12),
             ]), 
             dbc.Row([
                 dbc.Col([
