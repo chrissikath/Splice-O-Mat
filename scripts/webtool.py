@@ -1938,19 +1938,32 @@ def selectAllTissues(n_clicks):
         [State("search-output-ref-geneA", "data")], 
         prevent_initial_call=True
 )
-def download_table_transcripts(n_clicks, data):
+def download_table_transcripts(n_clicks: int, data: list[dict[str, any]]) -> dict[str, str]:
     """Downloads the data in search-output-ref-geneA as a tsv file 
     by clicking on the button btn.
-    # TODO: Check for input type
+
     Args:
         n_clicks (int): number of clicks of button btn
-        data (table): table in search-output-ref-geneA
+        data (list[dict]): table in search-output-ref-geneA
 
     Returns:
         dict: dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
-    """    
+    
+    Raises:
+        ValueError: If data is not in the expected format or 'gene_name' column is missing.
+    """
+    try:
+        df = pd.DataFrame.from_records(data)
+    except ValueError:
+        raise ValueError("Data is not in the expected format (expected a list of dictionaries).")
+
+    if 'gene_name' not in df.columns:
+        raise ValueError("'gene_name' column is missing in the data.")
+
     df = pd.DataFrame.from_records(data)
-    return dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
+    gene_names = df["gene_name"].unique()
+    gene_names = "_".join(gene_names)
+    return dict(content=df.to_csv(sep="\t", index=False),filename=gene_names+"_data.tsv")
 
 @app.callback(
         Output("download-exon", "data"), 
