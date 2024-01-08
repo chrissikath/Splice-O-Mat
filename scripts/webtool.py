@@ -337,7 +337,7 @@ def plot_heatmap(tpms, transcripts, relative=True):
     y_labels = transcripts
 
     if relative:
-        cbar_legend = 'TPM (% per tissue)'
+        cbar_legend = 'TPM (%, per tissue)'
         title_figure = "Relative expression of transcripts (%, per tissue)"
     else:
         cbar_legend = 'TPM (mean)'
