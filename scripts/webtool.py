@@ -347,19 +347,35 @@ def plot_heatmap(tpms, transcripts, relative=True):
                 labels=dict(x="Tissues", y="Transcripts", color=cbar_legend),
                 x=x_labels,
                 y=y_labels,
-                color_continuous_scale='Inferno'
+                color_continuous_scale='Inferno',
+                aspect="auto",
+                width=num_entries_based_width(len(x_labels)),
+                height=num_fields_based_height(len(y_labels)),
                )
-    fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=18)    
-    # fig.update_layout(font=dict(size=14))  # Set the font size to your desired value
-
+    
+    
+    fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=16)
+    fig.update_layout(xaxis_nticks=len(x_labels),yaxis_nticks=len(y_labels)) 
     fig.update_xaxes(tickangle=-45)
-    # fig.update_layout(width=1800)  # Set the width to your desired value for manuscript
-    # fig.update_layout(height=750)  # Set the height to your desired value
+
+    fig.update_yaxes(tickmode='array', tickvals=list(range(len(y_labels))), ticktext=y_labels)
+
 
     try:
         return fig
     except Exception as e:
         print(f"An error occurred while saving the heatmap: {str(e)}")
+
+def num_fields_based_height(num_fields: int) -> int:
+    padding = 0 # arbitrary value depending on legends
+    row_size = 40 # arbitrary value
+    min = 400
+    return max(min, padding + row_size * num_fields)
+
+def num_entries_based_width(num_entries: int) -> int:
+    padding = 0 # arbitrary value depending on legends
+    entry_size = 28 # arbitrary value
+    return padding + entry_size * num_entries
 
 def generate_svg(transcripts, position_mut=None):
     """Generates a svg for a transcript variants of the list transcripts.
@@ -650,7 +666,7 @@ def get_proteins(ref_gene_id):
         cDNA_dict = get_cDNA(df["transcript_id"])
         
         for transcript in cDNA_dict:
-            print("transcript: %s" % transcript)
+            # print("transcript: %s" % transcript)
             cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
             # print("cDNA_string: %s" % cDNA_Seq)
             start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
@@ -658,7 +674,7 @@ def get_proteins(ref_gene_id):
                 print("No ORF found")
                 proteins[transcript]="No ORF found"
                 continue
-            print("--ORF from %d to %d--" % (start_genome, end_genome))
+            # print("--ORF from %d to %d--" % (start_genome, end_genome))
             if start_genome<=end_genome:
                 proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
             else:
@@ -802,13 +818,13 @@ def get_TPM_from_tissues(gene_id, tissues):
         end.append(last_exon_stop)
         number_exons.append(number_of_exon)
 
-    # TODO: insert protein length of predicted protein after UDO fixed protein (- strand) problem
+    # TODO: check gene RBFOX2 
+    print(df_result["gene_name"])
     predicted_proteins = get_proteins(df_result["gene_name"][0])
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
     for transcripts_id in predicted_proteins:
         length_protein.append(len(predicted_proteins[transcripts_id]))
-    #insert value at column 1
     df_result.insert(3, "length transcript (bp)", length_transcript)
     df_result.insert(4, "length predicted protein (as)", length_protein)
     df_result.insert(5, "start", start)
@@ -1479,17 +1495,17 @@ card1 = dbc.Card([
                 dbc.Col([html.Br()]),
                 dbc.Col([html.Div(html.Img(id="gene-png", width="100%"))],width=12),
             ]), 
-            dbc.Row([
-                dbc.Col([
-                    html.Div(
-                        dbc.Alert("Attention: For small display size or for high number of transcript variants, heatmap might show only every second transcript and tissue. Please hover over the heatmap for more informtion.", color="secondary"),
-                        id="display-size-warning")
-                ],width=12),
-            ]),
+            # dbc.Row([
+            #     dbc.Col([
+            #         html.Div(
+            #             dbc.Alert("Attention: For small display size or for high number of transcript variants, heatmap might show only every second transcript and tissue. Please hover over the heatmap for more informtion.", color="secondary"),
+            #             id="display-size-warning")
+            #     ],width=12),
+            # ]),
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-relatives")
-                    html.Div([dcc.Graph(id="heatmap-relatives", responsive=True)], id="heatmap-relatives-div", style={'display':'none'})
+                    html.Div([dcc.Graph(id="heatmap-relatives", responsive=False)], id="heatmap-relatives-div", style={'display':'none'})
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
 
@@ -1498,7 +1514,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([
                     # html.Div(id="heatmap-absolutes")
-                    html.Div([dcc.Graph(id="heatmap-absolutes", responsive=True)], id="heatmap-absolutes-div", style={'display':'none'})
+                    html.Div([dcc.Graph(id="heatmap-absolutes", responsive=False)], id="heatmap-absolutes-div", style={'display':'none'})
                     # html.Div(html.Img(id="heatmap-absolutes", width="100%"))
                 ],width=12),
             ]),
@@ -2387,7 +2403,6 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(result_df, True)
-            print(type(heatmap_rel))
             heatmap_abs = generate_heatmap(result_df, False)
             con.close()
             print("Average TPM calcuated")
