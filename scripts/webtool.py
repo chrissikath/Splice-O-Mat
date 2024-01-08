@@ -338,9 +338,9 @@ def plot_heatmap(tpms, transcripts, relative=True):
 
     if relative:
         cbar_legend = 'TPM (% per tissue)'
-        title_figure = "Relative expression of transcripts (% total gene count)"
+        title_figure = "Relative expression of transcripts (%, per tissue)"
     else:
-        cbar_legend = 'TPM (mean per tissue)'
+        cbar_legend = 'TPM (mean)'
         title_figure = "Absolute expression of transcripts"
     
     fig = px.imshow(tpms.values,
@@ -1453,7 +1453,7 @@ card1 = dbc.Card([
                 dbc.Input(id='strand', value='', type='text'),])
             ],width=2),
             dbc.Col([
-                html.Div([dbc.Label("genomic variants to depict (positions separated by comma):"),
+                html.Div([dbc.Label("genomic positions to depict (positions separated by comma):"),
                 dbc.Input(id='mutation', placeholder='position', type='text'),])
             ],width=2),
             dbc.Col([
@@ -2026,7 +2026,12 @@ def update_options(search_value):
     """    
     if not search_value:
         raise exceptions.PreventUpdate
-    return [o for o in ref_gene_names if search_value in o["label"]]
+    
+    # Convert the search_value to uppercase (since your default is uppercase)
+    search_value_upper = search_value.upper()
+
+    # Use a case-insensitive comparison
+    return [o for o in ref_gene_names if search_value_upper in o["label"]]
 
 ### download cDNAs
 @app.callback(
