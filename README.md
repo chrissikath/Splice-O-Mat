@@ -132,6 +132,7 @@ Other necessary files:
 Additional analysis in the manuscript: 
 - ../analysis/compare_CLSR1_with_genocode_and_diagostics/: Comparison with diagnostic exome sequencing of CELSR1/ADGRC1
 - ../analysis/tissue_specific_splicing/: Spearman and violin plot of tissue-specific splicing
+- ../analysis/high_number_newly_transcripts/: Analysis if ratio of newly identified transcript are influenced by expression threshold, tissues type, number of samples
 
 ## Results 
 Inside the `analysis/` directory, you will find the following directories for each dataset:
