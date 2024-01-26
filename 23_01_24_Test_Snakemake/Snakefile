@@ -1,0 +1,159 @@
+# How to run:
+# snakemake --cores N --config genome=hg38.fna transcriptome=/opt/genomes/human/hg38/ncbi_full_analysis_set/hg38.ncbiRefSeq.gtf star_index=/home/christina/22_11_23_Transcript_Variants_aGPCR/analysis/STARIndex
+
+# Pipeline for splice-variant analysis
+# 1. Fastqc of raw data 
+# 2. Mapping with STAR (hg38)
+# 3. Assembly of transcripts with stringtie (using reference genome)
+# 4. Merge assemblies (to generate a non-redundant set of transcripts)
+# 5. Re-Quantification of transcripts with stringtie (using merged assembly)
+
+
+import glob
+import os
+
+# Take a --congif or a config file as input 
+ref_transcriptome_gf = config['transcriptome'] #/opt/genomes/human/hg38/ncbi_full_analysis_set/hg38.ncbiRefSeq.gtf
+star_index = config['star_index'] #/home/christina/Transcript_Variants_aGPCR/analysis/STARIndex
+
+# Create a combination of sample_dir and sample_base (brain, SRR123456_1), (brain, SRR123456_2) for each fastq.gz file in data folder
+dir_file_pairs = [(os.path.basename(os.path.dirname(f)), os.path.basename(f).replace('.fastq.gz', ''))
+                  for f in glob.glob("data/*/*_*.fastq.gz")]
+
+# Create a combination of sample_dir and sample_base (brain, SRR123456) for mapping
+pattern = r"(_[12]\.fastq\.gz|_R[12]\.fastq\.gz)"
+dir_file_pairs_mapping = [(os.path.basename(os.path.dirname(f)), re.sub(pattern, "", os.path.basename(f))) \
+                for f in glob.glob("data/*/*_*.fastq.gz")]
+
+rule all:
+#TODO: check how rule all works
+    input:
+        fastqc_run = ["results/qc/{sample_dir}/{sample_base}_fastqc.html".format(
+            sample_dir=sample,\
+            sample_base=dir) for sample, dir in dir_file_pairs],
+        mapping = ["results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.bam".format(
+            sample_dir=sample,\
+            sample_base_mapping=dir) for sample, dir in dir_file_pairs_mapping],
+        sorting = ["results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.sorted.bam".format(
+            sample_dir=sample,\
+            sample_base_mapping=dir) for sample, dir in dir_file_pairs_mapping],
+        assembly = ["results/assembly/{sample_dir}/{sample_base_mapping}_transcripts.gtf".format(
+            sample_dir=sample, sample_base_mapping=dir) for sample, dir in dir_file_pairs_mapping],
+        merge_assemblies = "results/assembly/merged.gtf",
+        quantification = ["results/quantification/{sample_dir}/{sample_base_mapping}_quant.gtf".format(
+            sample_dir=sample, sample_base_mapping=dir) for sample, dir in dir_file_pairs_mapping]
+
+#Fastqc the raw data
+rule fastqc:
+    input:
+        "data/{sample_dir}/{sample_base}.fastq.gz"
+    output:
+        "results/qc/{sample_dir}/{sample_base}_fastqc.html",
+    threads:
+        4
+    shell:
+        "mkdir -p results/qc/{wildcards.sample_dir}/ && "\
+        "fastqc {input} -t {threads} --outdir results/qc/{wildcards.sample_dir}/"
+
+#Multiqc the fastqc results
+rule multiqc:
+    input:
+        expand("results/qc/{sample_dir}/", sample_dir=[sample for sample, _ in dir_file_pairs])
+    output:
+        "results/qc/{sample_dir}/multiqc_report.html"
+    shell:
+        "multiqc {input} -o results/qc/{wildcards.sample_dir}/"
+
+#TODO: check if hisat2 is better? 
+#Mapping with STAR (splice-aware aligner)
+rule star_mapping:
+    input: 
+        read1 = lambda wildcards: "data/{sample_dir}/{sample_base_mapping}_1.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping) if os.path.exists("data/{sample_dir}/{sample_base_mapping}_1.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping)) else "data/{sample_dir}/{sample_base_mapping}_R1.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping),
+        read2 = lambda wildcards: "data/{sample_dir}/{sample_base_mapping}_2.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping) if os.path.exists("data/{sample_dir}/{sample_base_mapping}_2.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping)) else "data/{sample_dir}/{sample_base_mapping}_R2.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping)
+    params:
+        OUT_DIR = "results/mapping/{sample_dir}/{sample_base_mapping}/",
+        STARINDEX_DIR = star_index,
+    threads: 
+        20
+    output:
+        "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.bam"
+    shell:
+        "mkdir -p results/mapping/{wildcards.sample_dir}/ && "\
+        "STAR --runThreadN {threads}\
+		--genomeDir {params.STARINDEX_DIR} \
+		--readFilesIn {input.read1} {input.read2} \
+		--outFileNamePrefix {params.OUT_DIR} \
+		--outSAMtype BAM Unsorted \
+		--quantMode GeneCounts \
+		--readFilesCommand zcat \
+		--outSAMstrandField intronMotif"
+
+#TODO : mapping qulity control with mutliqc 
+
+rule samtools_sort:
+    input:
+        "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.bam"
+    output:
+        "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.sorted.bam"
+    threads:
+        20
+    shell:
+        "samtools sort -@ {threads} {input} -o {output}"
+
+# #assembly transcripts with stringtie
+rule assembly:
+    input:
+        "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.sorted.bam"
+    output:
+        "results/assembly/{sample_dir}/{sample_base_mapping}_transcripts.gtf"
+    params:
+        TRANSCTIPTOME_ANNO = ref_transcriptome_gf
+    threads:
+        20
+    shell:
+    #TODO: check parameters
+    # -a 1 -> could be left out since it realy increases splice junction detection if only one reads spans the junction
+    # -f and -c could also be defaults 
+    #TODO: strandend libary? Assumes a stranded library fr-firststrand.
+    #TODO: check if annotation here is needed or make a difference in the output
+        "stringtie -c 0.1 -f 0.0 -m 50 -a 1 -p {threads} {input} -o {output} -G {params.TRANSCTIPTOME_ANNO}"
+
+rule merge_assemblies:
+    input:
+        ["results/assembly/{sample_dir}/{sample_base_mapping}_transcripts.gtf".format(\
+            sample_dir=sample_dir, sample_base_mapping=sample_base_mapping)\
+        for sample_dir, sample_base_mapping in dir_file_pairs_mapping]
+    output:
+        "results/assembly/merged.gtf"
+    params:
+        TRANSCTIPTOME_ANNO = ref_transcriptome_gf,
+    threads:
+        20 
+    shell:
+        "ls {input} > results/assembly/merge_file.txt && "\
+        "stringtie --merge -G {params.TRANSCTIPTOME_ANNO} -o {output} results/assembly/merge_file.txt -l 'NSTRG'"
+
+#compare merged transcripts with the reference annotation
+# The gffcompare program then compares the genes and transcripts with the annotation and reports statistics on this comparison.
+# rule check_asembly_quality:
+#     input:
+#         merged_gtf = "results/assembly/merged.gtf",
+#     output:
+#         "results/assembly/merged.gff.cmap"
+#     params:
+#         TRANSCTIPTOME_ANNO = ref_transcriptome_gf,
+#     shell:
+#         "gffcompare -r -G {params.TRANSCTIPTOME_ANNO} -o {output} {input}"
+    # will also generate gffcmp.stats which shows precision and recall of the assembly
+
+rule quantification:
+    input:
+        merged_gtf = "results/assembly/merged.gtf",
+        assembled_gtf = "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.sorted.bam"
+    output:
+        "results/quantification/{sample_dir}/{sample_base_mapping}_quant.gtf"
+    threads:
+        20
+    shell:
+        "mkdir -p results/quantification/{wildcards.sample_dir}/ && "\
+        "stringtie -e -p {threads} -G {input.merged_gtf} -o {output} {input.assembled_gtf}"

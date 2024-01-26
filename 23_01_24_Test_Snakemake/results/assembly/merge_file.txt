@@ -1,0 +1,8 @@
+results/assembly/hearth/SRR13506060_transcripts.gtf
+results/assembly/hearth/SRR13506060_transcripts.gtf
+results/assembly/hearth/SRR13506120_transcripts.gtf
+results/assembly/hearth/SRR13506120_transcripts.gtf
+results/assembly/melanoma/ipiPD1_24_PRE_transcripts.gtf
+results/assembly/melanoma/ipiPD1_24_PRE_transcripts.gtf
+results/assembly/melanoma/PD1_10_PRE_transcripts.gtf
+results/assembly/melanoma/PD1_10_PRE_transcripts.gtf

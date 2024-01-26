@@ -821,6 +821,7 @@ def get_TPM_from_tissues(gene_id, tissues):
     # TODO: check gene RBFOX2 
     print(df_result["gene_name"])
     predicted_proteins = get_proteins(df_result["gene_name"][0])
+    print(len(predicted_proteins))
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
     for transcripts_id in predicted_proteins:
