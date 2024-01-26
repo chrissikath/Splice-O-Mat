@@ -4,8 +4,10 @@
 # Pipeline for splice-variant analysis
 # 1. Fastqc of raw data 
 # 2. Mapping with STAR (hg38)
+# 2.1 Sort bam files with samtools
 # 3. Assembly of transcripts with stringtie (using reference genome)
 # 4. Merge assemblies (to generate a non-redundant set of transcripts)
+# 4.1 Check assembly quality with gffcompare
 # 5. Re-Quantification of transcripts with stringtie (using merged assembly)
 
 
@@ -40,10 +42,11 @@ rule all:
         assembly = ["results/assembly/{sample_dir}/{sample_base_mapping}_transcripts.gtf".format(
             sample_dir=sample, sample_base_mapping=dir) for sample, dir in dir_file_pairs_mapping],
         merge_assemblies = "results/assembly/merged.gtf",
+        check_asembly_quality = "results/assembly/quality.gff",
         quantification = ["results/quantification/{sample_dir}/{sample_base_mapping}_quant.gtf".format(
             sample_dir=sample, sample_base_mapping=dir) for sample, dir in dir_file_pairs_mapping]
 
-#Fastqc the raw data
+#1.1 Fastqc the raw data
 rule fastqc:
     input:
         "data/{sample_dir}/{sample_base}.fastq.gz"
@@ -55,7 +58,7 @@ rule fastqc:
         "mkdir -p results/qc/{wildcards.sample_dir}/ && "\
         "fastqc {input} -t {threads} --outdir results/qc/{wildcards.sample_dir}/"
 
-#Multiqc the fastqc results
+#1.2 Multiqc the fastqc results
 rule multiqc:
     input:
         expand("results/qc/{sample_dir}/", sample_dir=[sample for sample, _ in dir_file_pairs])
@@ -65,7 +68,7 @@ rule multiqc:
         "multiqc {input} -o results/qc/{wildcards.sample_dir}/"
 
 #TODO: check if hisat2 is better? 
-#Mapping with STAR (splice-aware aligner)
+#2.0 Mapping with STAR (splice-aware aligner)
 rule star_mapping:
     input: 
         read1 = lambda wildcards: "data/{sample_dir}/{sample_base_mapping}_1.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping) if os.path.exists("data/{sample_dir}/{sample_base_mapping}_1.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping)) else "data/{sample_dir}/{sample_base_mapping}_R1.fastq.gz".format(sample_dir=wildcards.sample_dir, sample_base_mapping=wildcards.sample_base_mapping),
@@ -89,7 +92,7 @@ rule star_mapping:
 		--outSAMstrandField intronMotif"
 
 #TODO : mapping qulity control with mutliqc 
-
+#2.1 StringTie needs the alignments to be sorted by their genomic location
 rule samtools_sort:
     input:
         "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.bam"
@@ -100,7 +103,7 @@ rule samtools_sort:
     shell:
         "samtools sort -@ {threads} {input} -o {output}"
 
-# #assembly transcripts with stringtie
+#3.0 Assembly transcripts with stringtie using reference genome
 rule assembly:
     input:
         "results/mapping/{sample_dir}/{sample_base_mapping}/Aligned.out.sorted.bam"
@@ -118,6 +121,7 @@ rule assembly:
     #TODO: check if annotation here is needed or make a difference in the output
         "stringtie -c 0.1 -f 0.0 -m 50 -a 1 -p {threads} {input} -o {output} -G {params.TRANSCTIPTOME_ANNO}"
 
+#4.0 Merge assemblies to generate a non-redundant set of transcripts
 rule merge_assemblies:
     input:
         ["results/assembly/{sample_dir}/{sample_base_mapping}_transcripts.gtf".format(\
@@ -133,19 +137,19 @@ rule merge_assemblies:
         "ls {input} > results/assembly/merge_file.txt && "\
         "stringtie --merge -G {params.TRANSCTIPTOME_ANNO} -o {output} results/assembly/merge_file.txt -l 'NSTRG'"
 
-#compare merged transcripts with the reference annotation
+#4.1 Compare merged transcripts with the reference annotation
 # The gffcompare program then compares the genes and transcripts with the annotation and reports statistics on this comparison.
-# rule check_asembly_quality:
-#     input:
-#         merged_gtf = "results/assembly/merged.gtf",
-#     output:
-#         "results/assembly/merged.gff.cmap"
-#     params:
-#         TRANSCTIPTOME_ANNO = ref_transcriptome_gf,
-#     shell:
-#         "gffcompare -r -G {params.TRANSCTIPTOME_ANNO} -o {output} {input}"
-    # will also generate gffcmp.stats which shows precision and recall of the assembly
+rule check_asembly_quality:
+    input:
+        merged_gtf = "results/assembly/merged.gtf",
+    output:
+        "results/assembly/quality.gff"
+    params:
+        TRANSCTIPTOME_ANNO = ref_transcriptome_gf,
+    shell:
+        "gffcompare -r {params.TRANSCTIPTOME_ANNO} -o {output} {input}"
 
+#5.0 Stringtie quantification step with merged annotation to ensure consistent gene and transcript IDs across samples
 rule quantification:
     input:
         merged_gtf = "results/assembly/merged.gtf",

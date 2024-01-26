@@ -1,0 +1,30 @@
+# gffcompare v0.12.6 | Command line was:
+#gffcompare -r /opt/genomes/human/hg38/ncbi_full_analysis_set/hg38.ncbiRefSeq.gtf combo_version2.gtf -o assembly_quality/
+#
+
+#= Summary for dataset: combo_version2.gtf 
+#     Query mRNAs :  402472 in   96718 loci  (371991 multi-exon transcripts)
+#            (32373 multi-transcript loci, ~4.2 transcripts per locus)
+# Reference mRNAs :  166518 in   41789 loci  (161175 multi-exon)
+# Super-loci w/ reference transcripts:    35329
+#-----------------| Sensitivity | Precision  |
+        Base level:   100.0     |    34.0    |
+        Exon level:    89.8     |    49.3    |
+      Intron level:    99.8     |    62.0    |
+Intron chain level:   100.0     |    43.3    |
+  Transcript level:    98.9     |    40.9    |
+       Locus level:    96.6     |    35.5    |
+
+     Matching intron chains:  161103
+       Matching transcripts:  164756
+              Matching loci:   40361
+
+          Missed exons:       0/421538	(  0.0%)
+           Novel exons:  234867/828247	( 28.4%)
+        Missed introns:     475/358686	(  0.1%)
+         Novel introns:  108071/578003	( 18.7%)
+           Missed loci:       0/41789	(  0.0%)
+            Novel loci:   61389/96718	( 63.5%)
+
+ Total union super-loci across all input datasets: 96718 
+402472 out of 402472 consensus transcripts written in assembly_quality/.annotated.gtf (0 discarded as redundant)
