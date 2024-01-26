@@ -27,6 +27,7 @@ analysis/ballgown/
 analysis/STARIndex/
 
 # Exclude tmp, cache, etc.
+.snakemake/
 *tmp*
 *temp*
 _STARtmp/
