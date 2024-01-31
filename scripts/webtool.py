@@ -635,7 +635,38 @@ def get_cDNA(transcripts):
     return cDNAs
 
 
-def get_proteins(ref_gene_id):
+def get_proteins(transcript_ids):
+    """ Get proteins for a list of of transcripts
+
+    Args:
+        transcript_ids (list-ish): transcript ids
+
+    Returns:
+        (dict): maps transcript_ids to their protein sequences
+    """
+    cDNA_dict = get_cDNA(transcript_ids)
+
+    proteins = {}
+    for transcript in cDNA_dict:
+        # print("transcript: %s" % transcript)
+        cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
+        # print("cDNA_string: %s" % cDNA_Seq)
+        start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
+        if start_pos is None or end_pos is None:
+            print("No ORF found")
+            proteins[transcript]="No ORF found"
+            continue
+        # print("--ORF from %d to %d--" % (start_genome, end_genome))
+        if start_genome<=end_genome:
+            proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
+        else:
+            s = len(cDNA_Seq) - (end_pos+1)
+            e = len(cDNA_Seq) - start_pos
+            proteins[transcript] = cDNA_Seq[s:e].translate()
+    return proteins
+
+
+def get_proteins_by_gene(ref_gene_id):
     """ Get all proteins from all transcripts corresponding to ref_gene_id
     # TODO - ? change ref_gene_id to gene_name ? 
 
@@ -648,8 +679,7 @@ def get_proteins(ref_gene_id):
     Returns:
         (dict): maps transcript_ids to their protein sequences
     """
-    print("---- get_proteins from all transcript corresponding from gene_id ----")
-    proteins = {}
+    print("---- get_proteins_by_gene from all transcript corresponding from gene_id ----")
     statement_get_all_transcripts = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
     # statement_get_all_transcripts = "SELECT gene_id,transcript_id FROM transcripts WHERE gene_name=?"    
     if ref_gene_id is None:
@@ -663,25 +693,7 @@ def get_proteins(ref_gene_id):
         return (no_update, no_update, "Not available")
     else:
         df.columns = ["gene_id","transcript_id"]
-        cDNA_dict = get_cDNA(df["transcript_id"])
-        
-        for transcript in cDNA_dict:
-            # print("transcript: %s" % transcript)
-            cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
-            # print("cDNA_string: %s" % cDNA_Seq)
-            start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
-            if start_pos is None or end_pos is None:
-                print("No ORF found")
-                proteins[transcript]="No ORF found"
-                continue
-            # print("--ORF from %d to %d--" % (start_genome, end_genome))
-            if start_genome<=end_genome:
-                proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
-            else:
-                s = len(cDNA_Seq) - (end_pos+1)
-                e = len(cDNA_Seq) - start_pos
-                proteins[transcript] = cDNA_Seq[s:e].translate()
-        return proteins
+        return get_proteins(df["transcript_id"])
 
 
 def get_mRNA_from_gene_id(ref_gene_id):
@@ -820,7 +832,7 @@ def get_TPM_from_tissues(gene_id, tissues):
 
     # TODO: check gene RBFOX2 
     print(df_result["gene_name"])
-    predicted_proteins = get_proteins(df_result["gene_name"][0])
+    predicted_proteins = get_proteins(df_result["transcript_id"])
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
     for transcripts_id in predicted_proteins:
@@ -2093,7 +2105,7 @@ def downloadProteins(n_clicks,value):
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
-        proteins = get_proteins(value)
+        proteins = get_proteins_by_gene(value)
         fasta = ''.join([ ">"+key+"\n"+str(proteins[key])+"\n" for key in proteins ])
         return dict(content=fasta,filename="proteins_"+value+".fasta")
     
