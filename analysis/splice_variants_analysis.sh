@@ -108,7 +108,7 @@ cat ${SAMPLE_LIST} | cut -f2 | sed 's/\r$//' | while read sample; do
 	stringtie -c 0.1 -f 0.0 -m 50 -a 1 -p 20 ${OUTPUT}/star/$sample/Aligned.out.bam_sorted.bam \
 	  -o ${OUTPUT}/stringtie/$sample.gtf;
 	# -c -> minimum read coverage 
-	# -f -> disable trimming at the end of the transcripts 
+	# -f -> disable trimming at the end of the transcripts ?! -t 
 	# -m -> minimum length allowed for the predicted transcripts (normal=200)
 	# -a -> filtered out junctions that dont have spliced reads align with at least 1
 	# -p -> number of processing threads 
