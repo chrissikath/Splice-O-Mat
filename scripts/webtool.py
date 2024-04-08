@@ -744,10 +744,15 @@ def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
     Returns:
         (DataFrame): DataFrame with all transcripts from gennomics position
     """    
-    statement = "SELECT DISTINCT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts as t, exons as e WHERE t.id=e.transcript AND e.start>=? AND e.end<=? AND e.start<=? AND e.chrom=? AND e.strand=?"
     con = create_connection()
     cur = con.cursor()
-    res = cur.execute(statement,(start,stop,stop,chrom,strand))
+    if strand:
+        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
+        res = cur.execute(statement,(start,stop,chrom,strand))
+    else:
+        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
+        res = cur.execute(statement,(start,stop,chrom))
+
     df = pd.DataFrame(res.fetchall())
     if df.empty:
         con.close()
@@ -1250,8 +1255,13 @@ card_explanation = dbc.Card([
                     ]),
                 ])
                     
-            ], width=5)
-
+            ], width=5),
+            dbc.Col([
+                html.P([
+                    "If you use Splice-O-Mat for a scientific publication, please cite \"The repertoire and structure of adhesion GPCR transcript variants assembled from publicly available deep-sequenced human samples\", Christina Katharina Kuhn, Udo Stenzel, Sandra Berndt, Ines Liebscher, Torsten Schöneberg, Susanne Horn, Nucleic Acids Research, gkae145, ",
+                    html.A("https://doi.org/10.1093/nar/gkae145", href="https://doi.org/10.1093/nar/gkae145")
+                    ]),
+            ], width=12)
         ]),
     ])
 ])
@@ -2514,7 +2524,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
 
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
+            start, stop, chrom, _strand, drawing = generate_svg(df_result["transcript_id"],mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
