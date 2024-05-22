@@ -1,6 +1,6 @@
 # Author: Christina Kuhn
 # Date: 2022-03-10
-# Description: webtool for splice-o-mat, which is a tool to visualize splice-variants 
+# Description: webtool for splice-o-mat, which is a tool to visualize splice-variants
 #               from RNA-seq data and compare them in different samples and tissues
 #              the webtool is hosted at https://tools.hornlab.org/Splice-O-Mat/
 # Use Case: GPCR analysis as in the paper from 10.1038/s41598-019-46265-x.
@@ -59,14 +59,14 @@ class StdevFunc:
         if self.k < 3:
             return None
         return math.sqrt(self.S / (self.k-2))
-    
+
 def fill_dropdowns_in_dash_application():
     """Fill all dropdowns in dash application at the beginning
-    Fill main dropdown for gene selection (by gene_name) and 
+    Fill main dropdown for gene selection (by gene_name) and
     dropdowns for sample and tissue selection
 
     Returns:
-        list: gene_names, tissues_and_samples, tissues 
+        list: gene_names, tissues_and_samples, tissues
     """
     #connect with database
     con = create_connection()
@@ -81,7 +81,7 @@ def fill_dropdowns_in_dash_application():
     # gene_names = [item[0]+" "+item[1]+":"+str(item[2])+"-"+str(item[3]) for item in res.fetchall()]
     gene_names = [item[0] for item in res.fetchall()]
     gene_names = [{"label":i, "value":i} for i in gene_names]
-    
+
     print("----load samples----")
     samples = set()
     res = cur.execute("SELECT name FROM samples")
@@ -117,7 +117,7 @@ def create_connection():
 
     Returns:
         con: Connection object or None
-    """    """""" 
+    """    """"""
     con = None
     try:
         con = sqlite3.connect(database_file)
@@ -161,22 +161,22 @@ def transform_to_columns_and_data(result_df, exon_number=True):
     result_df = pd.DataFrame(result_df.apply(lambda row: {col: f"[{row[col]}](https://www.ncbi.nlm.nih.gov/nuccore/{row['transcript_id']})"
                                                       if (col == 'transcript_id' and not row[col].startswith('NSTRG'))
                                                       else row[col] for col in result_df.columns}, axis=1).tolist())
-    
+
     if exon_number:
         number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
         result_df.loc[-1] = "" * len(result_df.columns)  # adding a row
         result_df.loc[-1, "# of exons"] = number_inner_exons
 
     columns = [
-                {"name": i, "id": i, "presentation": "markdown"} if i == "transcript_id" else {"name": i, "id": i} 
+                {"name": i, "id": i, "presentation": "markdown"} if i == "transcript_id" else {"name": i, "id": i}
                 for i in result_df.columns
             ]
     data = result_df.to_dict('records')
 
-    return columns, data 
+    return columns, data
 
 def get_start_and_end_genomic_region(transcripts):
-    """Get start coordinate and end coordinate of genomic region were 
+    """Get start coordinate and end coordinate of genomic region were
     first exon of first transcript and last exon of last transcript are located
 
     Args:
@@ -198,7 +198,7 @@ def get_start_and_end_genomic_region(transcripts):
     #go through transcript and get start first exon = start_genomic_region and last exon = end_genomic_region
     for transcript in transcripts:
         y += 20
-        statement = "SELECT e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"        
+        statement = "SELECT e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
         res = cur.execute(statement, (transcript,))
         exons = res.fetchall()
         if (exons[0][0]) < start_genomic_region:
@@ -211,11 +211,11 @@ def get_exons_from_transcript_id(transcript_id):
     """Get all exons from a transcript id
 
     Args:
-        transcript_id (string): transcript_id 
+        transcript_id (string): transcript_id
 
     Returns:
         exons (list): list of tuples with start, end, chrom, strand
-    """    """ 
+    """    """
     """
     #open database connection
     con = create_connection()
@@ -245,8 +245,8 @@ def split_fasta_string_to_dict(cDNAs):
     return cDNAs_dict
 
 #get the key:value of the len(value)==max
-def get_max_flow(dict_input): 
-    """Get the key of the longest value in a dictionary 
+def get_max_flow(dict_input):
+    """Get the key of the longest value in a dictionary
     meands the longest transcript
 
     Args:
@@ -256,14 +256,14 @@ def get_max_flow(dict_input):
         value (string): longest protein sequence
         key (string): longest transcript id
     """    """
-    """       
+    """
     key_of_longest=max(dict_input, key=lambda k: len(dict_input[k]))
     return dict_input[key_of_longest],key_of_longest
 
 def find_domains_from_database(longest_transcript):
     """Find domains in a protein sequence from a database
     and return the domains and their start and end on the DNA on plus strand
-    #! if the gene lays on the minus strand, reverese complement is used, however, 
+    #! if the gene lays on the minus strand, reverese complement is used, however,
     #! the return values start and end on the DNA is still on the plus strand for plotting on the svg
     # wirkt einfach, war es aber nicht
     Args:
@@ -273,7 +273,7 @@ def find_domains_from_database(longest_transcript):
         domains (list): list of domains (transcript_id, domain, start_on_cDNA, end_on_cDNA)
     """
     print("--Find domains from database--")
-    
+
     #get domains from database
     statement = "SELECT d.domain, d.start, d.end FROM domains as d, transcripts as t WHERE t.id=d.transcript AND t.transcript_id=?"
     con = create_connection()
@@ -282,11 +282,11 @@ def find_domains_from_database(longest_transcript):
     df = pd.DataFrame(res.fetchall())
     if df.empty:
         con.close()
-    else: 
+    else:
         columns = ["domain","start","end"]
         df.columns = columns
         con.close()
-    
+
     #for each entry in df append longest_transcript, domain, start, end to domains
     domains = []
     for _, row in df.iterrows():
@@ -305,7 +305,7 @@ def generate_heatmap(result_df, relatives=True):
     Returns:
         a png file in a buffer
     """
-    
+
     print("--Generate heatmap--")
     try:
         transcripts = result_df["transcript_id"]
@@ -342,7 +342,7 @@ def plot_heatmap(tpms, transcripts, relative=True):
     else:
         cbar_legend = 'TPM (mean)'
         title_figure = "Absolute expression of transcripts (TPM)"
-    
+
     fig = px.imshow(tpms.values,
                 labels=dict(x="Tissues", y="Transcripts", color=cbar_legend),
                 x=x_labels,
@@ -352,10 +352,10 @@ def plot_heatmap(tpms, transcripts, relative=True):
                 width=num_entries_based_width(len(x_labels)),
                 height=num_fields_based_height(len(y_labels)),
                )
-    
-    
+
+
     fig.update_layout(title_text=title_figure, title_x=0.5, title_font_size=16)
-    fig.update_layout(xaxis_nticks=len(x_labels),yaxis_nticks=len(y_labels)) 
+    fig.update_layout(xaxis_nticks=len(x_labels),yaxis_nticks=len(y_labels))
     fig.update_xaxes(tickangle=-45)
 
     fig.update_yaxes(tickmode='array', tickvals=list(range(len(y_labels))), ticktext=y_labels)
@@ -391,13 +391,13 @@ def generate_svg(transcripts, position_mut=None):
     """
 
     print("--Generate svg--")
-    
+
     start_genomic_region_of_transcript, end_genomic_region_of_transcript,y = get_start_and_end_genomic_region(transcripts)
     absolut = (end_genomic_region_of_transcript-start_genomic_region_of_transcript) #100% = genomic region in absolut number
 
     # [ ] TODO - x and y
-    x_start = 0 
-    y_start = 20 
+    x_start = 0
+    y_start = 20
 
     size = 2000 #size of whole svg
     d = svgwrite.Drawing(viewBox="0 0 "+ str(size+300) +" "+ str(y+450) +"")
@@ -409,7 +409,7 @@ def generate_svg(transcripts, position_mut=None):
     d.add(svgwrite.text.Text("yellow = domains presented are predicted for the longest protein, \
                              to get all domains for each transcript press button 'Get domains'", \
                                 insert=(x_start, y_start+40), style="font-size:24"))
-    
+
     #for all transcript_ids get gene_name and smallest start and biggest end position
     # creat dictionary with strucutre gene_name:(start,end)
     gene_names = {}
@@ -441,10 +441,10 @@ def generate_svg(transcripts, position_mut=None):
     d.add(svgwrite.text.Text("presented genes (start of first exon, end of latest exon): "+resulting_string, \
                                 insert=(x_start, y_start+80), style="font-size:24"))
 
-    x_start = 0 
-    y_start = y_start+100 
+    x_start = 0
+    y_start = y_start+100
 
-    #draw genomic position 
+    #draw genomic position
     genomic_region = svgwrite.shapes.Rect(insert=(x_start+40, y_start+20), size=(size, 5),fill='grey')
     start = svgwrite.text.Text("Start: "+str(start_genomic_region_of_transcript), insert=(x_start+0,y_start+15), style="font-size:24")
     end = svgwrite.text.Text("End: "+str(end_genomic_region_of_transcript), insert=(size,y_start+15), style="font-size:24")
@@ -462,7 +462,7 @@ def generate_svg(transcripts, position_mut=None):
     #     d.add(gene_location_on_genome)
 
     y_start = y_start+20
-    
+
     longest_transcript=None
     max_length=0
 
@@ -471,7 +471,7 @@ def generate_svg(transcripts, position_mut=None):
     for transcript in transcripts: #for each transcript draw exon, intron, ORF
         y += 20
         exons = get_exons_from_transcript_id(transcript)
-        # for each exon in list of exons, calculate position in svg 
+        # for each exon in list of exons, calculate position in svg
         for j in exons:
             start_exon = ((absolut-(end_genomic_region_of_transcript-j[0]))*size)//(absolut)
             end_exon = ((absolut-(end_genomic_region_of_transcript-j[1]))*size)//(absolut)
@@ -483,7 +483,7 @@ def generate_svg(transcripts, position_mut=None):
         #draw line from first exons to last exon
         line = svgwrite.shapes.Rect(insert=(40+first_exon, y+2), size=(last_exon-first_exon, 0.5), fill='#58508d')
         d.add(line)
-            
+
         chrom = exons[0][2]
         strand = exons[0][3]
         start_pos, end_pos, orf_start_in_genome, orf_end_in_genome = find_longest_ORF(transcript) #find start stop in cDNA of longest ORF
@@ -499,10 +499,10 @@ def generate_svg(transcripts, position_mut=None):
             # draw orf with no opacity
             d.add( svgwrite.shapes.Rect(insert=(40+start, y-2), size=((end-start) ,10), opacity='0.6',
                 fill='#ff6361' if str(transcript).startswith("NSTRG") else '#ffa600' ))
-        
+
         transcript_id = svgwrite.text.Text(str(transcript), insert=(size+50,y+5), style="font-size:24")
         d.add(transcript_id)
-        
+
 
     #draw domains of longest protein in svg
     #find domains of each protein and return list of domains for longest protein
@@ -511,7 +511,7 @@ def generate_svg(transcripts, position_mut=None):
     #for each domain in list of domains, calculate position in svg
     y_position = y+10
     for domain in domains:
-        exons = get_exons_from_transcript_id(domain[0]) 
+        exons = get_exons_from_transcript_id(domain[0])
         domain_name = domain[1]
         start_domain_on_cDNA = int(domain[2])
         end_domain_on_cDNA = int(domain[3])
@@ -544,7 +544,7 @@ def generate_svg(transcripts, position_mut=None):
             mutation_position = ((absolut-(end_genomic_region_of_transcript-int(int(pos))))*size)//(absolut)
             mutation = svgwrite.shapes.Rect(insert=(40+mutation_position, y_start), size=(1,y+20-y_start), fill='#bc5090')
             d.add(mutation)
-        
+
     print("--Generate svg done--")
     return start_genomic_region_of_transcript, end_genomic_region_of_transcript, chrom, strand, d
 
@@ -557,7 +557,7 @@ def get_cDNA_pos_of_each_exon(exons):
 
     Returns:
         list: (start_exon, end_exon, start_exon_on_cDNA, end_exon_on_cDNA)
-    """    
+    """
     cDNA_pos = []
     start_genom = 0
     for exon in exons:
@@ -566,14 +566,14 @@ def get_cDNA_pos_of_each_exon(exons):
         if start_genom == 0:
             cDNA_pos.append([start_exon, end_exon, 0, end_exon-start_exon-1])# zero indexin to fit to ORF position
             start_genom = start_genom+(end_exon-start_exon-1)
-        else: 
+        else:
             cDNA_pos.append([start_exon, end_exon, start_genom+1, start_genom+1+(end_exon-start_exon-1)])
             start_genom = start_genom+1+(end_exon-start_exon-1)
     return cDNA_pos
 
 
 def find_longest_ORF(transcript):
-    """Find longest ORF of transcript_id "transcript" from database. 
+    """Find longest ORF of transcript_id "transcript" from database.
        Currently, the database layout works correctly only if all exons appear
        in syntheny.  start_pos and end_pos are the distances of the first and
        last base that are part of the longest ORF from the first base of the
@@ -589,14 +589,14 @@ def find_longest_ORF(transcript):
         (int, int, int, int): start_pos on plus, end_pos on plus, start_on_genome, end_on_genome
     """    """"""
     con = create_connection()
-    
+
     s, e, gs, ge = con.execute( """select sum( min(e.end,t.cds_start,t.cds_end) - min(e.start,t.cds_start,t.cds_end) ),
                                             sum( min(e.end,max(t.cds_start,t.cds_end)) - min(e.start,max(t.cds_start,t.cds_end)) ) - 1,
                                             t.cds_start, t.cds_end-1
                                     from transcripts t, exons e
                                     where t.transcript_id=? and e.transcript=t.id""",
                         (transcript,) ).fetchone() ;
-    con.close() 
+    con.close()
     if s==None or e==None or gs==None or ge==None:
         return (None,None,None,None) #no ORF Found
     else:
@@ -608,7 +608,7 @@ def get_cDNA(transcripts):
     Uses hg38 genome 2bit.  (2bit is smaller and faster than Fasta.  A lot.)
 
     Args:
-        transcripts (list): list of transcript ids like NM_001005484.1, NM_001005485.1 
+        transcripts (list): list of transcript ids like NM_001005484.1, NM_001005485.1
 
     Returns:
         (dict): maps each transcript_id to its cDNA sequence (a string)
@@ -618,7 +618,7 @@ def get_cDNA(transcripts):
     genome = twobitreader.TwoBitFile(genome_file)
     con = create_connection()
 
-    for current_transcript in transcripts: 
+    for current_transcript in transcripts:
         statement_get_exon_structure = "SELECT e.chrom, e.strand, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==? ORDER BY e.sequence_number"
 
         cur_seq = []
@@ -743,7 +743,7 @@ def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
 
     Returns:
         (DataFrame): DataFrame with all transcripts from gennomics position
-    """    
+    """
     con = create_connection()
     cur = con.cursor()
     if strand:
@@ -772,7 +772,7 @@ def get_TPM_from_tissues(gene_id, tissues):
 
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript
-    """    
+    """
     print("--Get TPMs for all tissues--")
     con = create_connection()
     con.create_aggregate("stdev", 1, StdevFunc)
@@ -807,15 +807,15 @@ def get_TPM_from_tissues(gene_id, tissues):
 
     #sort df_result by transcript_id
     df_result = df_result.sort_values(by=["transcript_id"])
-    
+
     # now get the length, number of exons, start and stop of each transcript
     con = create_connection()
     cur = con.cursor()
-    
+
     length_transcript = []
     start = []
     end = []
-    number_exons = [] 
+    number_exons = []
     for transcript in  df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
@@ -824,18 +824,18 @@ def get_TPM_from_tissues(gene_id, tissues):
         df = pd.DataFrame(res.fetchall())
         columns = ["exon number", "start", "end"]
         df.columns = columns
-                    
+
         number_of_exon = df.iloc[len(df)-1][0] #number of exons
         first_exon_start = df.iloc[0][1] #get position of first exon of
         last_exon_stop = df.iloc[len(df)-1][2] #get position of last exon
         length = last_exon_stop - first_exon_start #get length
-                    
+
         length_transcript.append(length)
         start.append(first_exon_start)
         end.append(last_exon_stop)
         number_exons.append(number_of_exon)
 
-    # TODO: check gene RBFOX2 
+    # TODO: check gene RBFOX2
     print(df_result["gene_name"])
     predicted_proteins = get_proteins(df_result["transcript_id"])
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
@@ -848,19 +848,19 @@ def get_TPM_from_tissues(gene_id, tissues):
     df_result.insert(6, "end", end)
     df_result.insert(7, "# of exons", number_exons)
     con.close()
-    
+
     return df_result
 
 def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     """Get TPMs for all transcripts in given tissues for given list of transcripts
 
     Args:
-        transcripts (list): list of transcript_id 
+        transcripts (list): list of transcript_id
         tissues (list): list of tissues (strings)
 
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript
-    """    
+    """
     print("--Get TPMs for all tissues--")
     con = create_connection()
     con.create_aggregate("stdev", 1, StdevFunc)
@@ -903,15 +903,15 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
 
     #sort df_result by transcript_id
     df_result = df_result.sort_values(by=["transcript_id"])
-    
+
     # now get the length, number of exons, start and stop of each transcript
     con = create_connection()
     cur = con.cursor()
-    
+
     length_transcript = []
     start = []
     end = []
-    number_exons = [] 
+    number_exons = []
     for transcript in df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
@@ -920,12 +920,12 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
         df = pd.DataFrame(res.fetchall())
         columns = ["exon number", "start", "end"]
         df.columns = columns
-                    
+
         number_of_exon = df.iloc[len(df)-1][0] #number of exons
         first_exon_start = df.iloc[0][1] #get position of first exon of
         last_exon_stop = df.iloc[len(df)-1][2] #get position of last exon
         length = last_exon_stop - first_exon_start #get length
-                    
+
         length_transcript.append(length)
         start.append(first_exon_start)
         end.append(last_exon_stop)
@@ -937,7 +937,7 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     df_result.insert(5, "end", end)
     df_result.insert(6, "# of exons", number_exons)
     con.close()
-    
+
     return df_result
 
 def get_group_comparisons_from_gene_id(gene_id, groupA, groupB):
@@ -950,7 +950,7 @@ def get_group_comparisons_from_gene_id(gene_id, groupA, groupB):
 
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript for groupA and groupB
-    """    
+    """
     con = create_connection()
     con.create_aggregate("stdev", 1, StdevFunc)
     cur = con.cursor()
@@ -992,7 +992,7 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
 
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript for groupA and groupB
-    """    
+    """
     con = create_connection()
     con.create_aggregate("stdev", 1, StdevFunc)
     cur = con.cursor()
@@ -1010,7 +1010,7 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
         for i in range(len(groupB)):
             groupB[i] = groupB[i].replace("['","")
             groupB[i] = groupB[i].replace("']","")
- 
+
         statement_A = "\
             SELECT \
                 t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
@@ -1047,7 +1047,7 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
         #for each element in list remove "['" and "']"
         for i in range(len(groupB)):
             groupB[i] = groupB[i].replace("['","")
-            groupB[i] = groupB[i].replace("']","")      
+            groupB[i] = groupB[i].replace("']","")
         statement_A = "SELECT \
                 t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
             AS \
@@ -1093,14 +1093,14 @@ def calculate_percentage_for_TPM(df_result):
 
     Returns:
         (DataFrame): DataFrame extended for percentage of TPMs
-    """    
+    """
     con = create_connection()
     cur = con.cursor()
-    
+
     length_transcript = []
     start = []
     end = []
-    number_exons = [] 
+    number_exons = []
     for transcript in df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
@@ -1109,12 +1109,12 @@ def calculate_percentage_for_TPM(df_result):
         df = pd.DataFrame(res.fetchall())
         columns = ["exon number", "start", "end"]
         df.columns = columns
-                    
+
         number_of_exon = df.iloc[len(df)-1][0] #number of exons
         first_exon_start = df.iloc[0][1] #get position of first exon of
         last_exon_stop = df.iloc[len(df)-1][2] #get position of last exon
         length = last_exon_stop - first_exon_start #get length
-                    
+
         length_transcript.append(length)
         start.append(first_exon_start)
         end.append(last_exon_stop)
@@ -1178,7 +1178,7 @@ def calculate_inner_exons(gene_id):
 ################ 2.0 DASH APP #########################
 # TODO - use dbc.Col and dbc.Row to make the app responsive
 #APP Instance
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP,'assets/styles.css'], url_base_pathname=url_base_pathname) 
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP,'assets/styles.css'], url_base_pathname=url_base_pathname)
 
 # initialize the dropdowns in the app
 ref_gene_names, tissues_and_samples, tissues = fill_dropdowns_in_dash_application()
@@ -1194,8 +1194,8 @@ card_explanation = dbc.Card([
             ], width=12),
             dbc.Col([
                 html.H6("How to use the app: "),
-                html.P(["The app is divided into 2 steps", 
-                        html.Br(), 
+                html.P(["The app is divided into 2 steps",
+                        html.Br(),
                         " Step 1: Select Tissue/Samples for group comparison or across all tissues",
                         html.Br(),
                         " Step 2: Select Gene for visualization and analysis of transcripts"]),
@@ -1254,7 +1254,7 @@ card_explanation = dbc.Card([
                         )
                     ]),
                 ])
-                    
+
             ], width=5),
             dbc.Col([
                 html.P([
@@ -1498,7 +1498,7 @@ card1 = dbc.Card([
                 html.Br(),
                 dbc.Button('Update transcripts', id='update-button', color="secondary", n_clicks=0)
             ],width=2),
-        ]), 
+        ]),
         #search transcripts and get cDNA
         html.Br(),
         dcc.Loading( type="default",children=[
@@ -1516,7 +1516,7 @@ card1 = dbc.Card([
             dbc.Row([
                 dbc.Col([html.Br()]),
                 dbc.Col([html.Div(html.Img(id="gene-png", width="100%"))],width=12),
-            ]), 
+            ]),
             # dbc.Row([
             #     dbc.Col([
             #         html.Div(
@@ -1531,7 +1531,7 @@ card1 = dbc.Card([
                     # html.Div(html.Img(id="heatmap-relatives", width="100%"))
                 ],width=12),
 
-            ]), 
+            ]),
             dbc.Row([html.Br(),]),
             dbc.Row([
                 dbc.Col([
@@ -1543,7 +1543,7 @@ card1 = dbc.Card([
             dbc.Row([html.Br(),]),
             dbc.Row([
                 dbc.Col([
-                    dbc.Button("Export", id="btn",  color="secondary", n_clicks=0), 
+                    dbc.Button("Export", id="btn",  color="secondary", n_clicks=0),
                     dcc.Download(id="download"),
                 ], width=2),
             ]),
@@ -1553,13 +1553,13 @@ card1 = dbc.Card([
                     dash_table.DataTable(
                         id='search-output-ref-geneA',
                         columns=[],
-                        data=[], 
+                        data=[],
                         sort_action='native',  # Enable native sorting
-                        style_cell={'fontSize':14}, 
+                        style_cell={'fontSize':14},
 
                         )
                     ),
-                ], width=12),   
+                ], width=12),
             ]),
         ]),
     ])
@@ -1668,7 +1668,7 @@ tab2_content_transcripts = dbc.Card(
             ]),
             dbc.Row([
                 dbc.Col([
-                    dbc.Button("Export", id="btn-exon",  color="secondary", n_clicks=0), 
+                    dbc.Button("Export", id="btn-exon",  color="secondary", n_clicks=0),
                     dcc.Download(id="download-exon"),
                 ], width=2)
             ]),
@@ -1717,14 +1717,14 @@ card2 = dbc.Card([
         html.Br(),
         dbc.Row([
             dbc.Col([
-                dbc.Input(type="text", id='transcript-id', placeholder='NSTRG.8029.1',), 
+                dbc.Input(type="text", id='transcript-id', placeholder='NSTRG.8029.1',),
                 html.P(id='transcript-id-err',style={'color':'red'}),
                 html.Br(),
             ], width=6),
         ]),
         dbc.Row([
                 dbc.Col([
-                    dbc.Button("Export", id="btn-transcript-id", color="secondary", n_clicks=0), 
+                    dbc.Button("Export", id="btn-transcript-id", color="secondary", n_clicks=0),
                     dcc.Download(id="download-transcript-id"),
                 ], width=2)
             ]),
@@ -1740,7 +1740,7 @@ popover_sql_statement = "The user can make custom SQL queries to the database ac
 #card 3
 card3 = dbc.Card([
     dbc.CardHeader("SQL statement:", style={"font-size": "24px"}),
-    dbc.CardBody([  
+    dbc.CardBody([
         dbc.Row([
             html.H6('Execute SQL statement'),
         ]),
@@ -1784,25 +1784,25 @@ card3 = dbc.Card([
             dbc.Col([
                 html.Br(),
                 dcc.Loading(
-                    type="default", 
+                    type="default",
                     children = dash_table.DataTable(id='table-sql-output',columns=[],data=[],sort_action='native', export_format="csv"),
                 )
             ]),
         ]),
-        
+
     ]),
 ])
 
 #card 4
 card4 = dbc.Card([
     dbc.CardHeader("Info", style={"font-size": "24px"}),
-    dbc.CardBody([          
+    dbc.CardBody([
         html.P("We obtained three brain tissue dataset (GSE173955, GSE182321, GSE101521), one liver tissue dataset (GSE174478), one heart tissue dataset (GSE165303), one kidney tissue dataset (GSE217427) and one dataset including 45 different tissues types (GSE138734) from the Gene Expression Omnibus (GEO) public dataset. We further obtained one melanoma cancer dataset (PRJEB23709) from the European Nucleotide Archive. Only paired-end RNA-seq samples were included and datasets generated without random primers were excluded. The raw data was mapped against the hg38 human genome using STAR (version 2.7.6a) with default parameters. After indexing with samtools (version 1.9) the mapped reads were assembled to transcripts and quantified by StringTie (version v2.1.3b). StringTie parameters ‘read coverage’ (-c), ‘transcript length’ (-m) and ‘bases on both sides of a junction a spliced read has to cover’ (-a) were set to minimal values in order to avoid missing transcripts and generating a bias. The parameter ‘fraction of most abundant transcript at one locus’ (-f) was lowered from default (0.01) to 0. For all other StringTie parameters default values were used. To generate a global, unified set of transcripts across all three RNA-Seq samples, StringTie merge mode with providing the reference annotation (-G) was used. Quantification of abundance of the input transcripts was then performed using parameters ‘expression estimation mode’ (-e) with parameters ‘ballgown output’ (-B) and the beforehand generated ‘reference annotation transcripts’ (-G)."),
         html.P("Annotated transcripts are labeled with their RefSeq accessions: NM = Protein-coding transcripts (usually curated), NR = Non-protein-coding transcripts, XM = Predicted model protein-coding transcript, XR = Predicted model non-protein-coding transcript. Potential new transcripts assigned by Stringtie (not in the NCBI hg38 genome annotation) are annotated with 'NSTRG'"),
         html.P("The webtool was created by Christina Kuhn. For questions and suggestions please contact christina.kuhn@medizin.uni-leipzig.de")
     ]),
 ])
-   
+
 #put cards together
 app.layout = html.Div([
     #Top
@@ -1836,10 +1836,10 @@ app.layout = html.Div([
 # ? question comment
 
 @app.callback(
-   [Output('groupA','children'), 
-    Output('groupB','children')], 
+   [Output('groupA','children'),
+    Output('groupB','children')],
     Input('group-button', 'n_clicks'),
-    [State('group-comparisonA', 'value'), 
+    [State('group-comparisonA', 'value'),
      State('group-comparisonB','value')]
 )
 def selectGroups(n_clicks, group_comparisonA, group_comparisonB):
@@ -1852,7 +1852,7 @@ def selectGroups(n_clicks, group_comparisonA, group_comparisonB):
 
     Returns:
         string, string: groupA, groupB as like '["tissue1", "tissue2"]'
-    """    
+    """
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update, no_update)
     if n_clicks is not None and n_clicks>0:
@@ -1871,12 +1871,12 @@ def selectGroups(n_clicks, group_comparisonA, group_comparisonB):
         return (str(group_comparisonA), str(group_comparisonB))
     else:
         return (no_update, no_update)
-    
+
 @app.callback(
-        Output("download-without-groups", "data"), 
-        [Input("btn-download-without-groups", "n_clicks")], 
-        [State('all-tissues-dropdown','value'), 
-         State('my-dynamic-dropdown', 'value')], 
+        Output("download-without-groups", "data"),
+        [Input("btn-download-without-groups", "n_clicks")],
+        [State('all-tissues-dropdown','value'),
+         State('my-dynamic-dropdown', 'value')],
          prevent_initial_call=True
 )
 def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
@@ -1896,42 +1896,34 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
     print("----download table TPMs without means----")
     df = pd.DataFrame() #dataframe for each group TPMs for each sample
     con = create_connection()
-    cur = con.cursor()
-    #get gene id
-    statement = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id==?"
-    # input_value = input_value.split(" ")[0]
-    res = cur.execute(statement, [input_value])
-    df_result = pd.DataFrame(res.fetchall())
-    print(df_result)
-    if df_result.empty:
+
+    statement = "SELECT DISTINCT transcript_id FROM transcripts WHERE gene_name=?"
+    transcript_ids = [t for (t,) in con.execute(statement, [input_value])]
+    if not transcript_ids:
         print("no Update")
         con.close()
         raise exceptions.PreventUpdate
-                       
-    #save second column from df_result as a list of transcript_ids
-    transcript_ids = df_result.iloc[:,1]
 
-    cur = con.cursor()
-    df_final = [] 
+    df_final = []
     columns_list = []
-    for tissue in tissues: 
-        # print(tissue['value']) 
+    for tissue in tissues:
+        # print(tissue['value'])
         df_tissue = pd.DataFrame(columns=columns_list)
         #get value at key "label" from dictionary
         for transcript in transcript_ids:
             statement = "select s.tissue, s.name, e.tpm from expresses as e, samples as s, transcripts as t WHERE e.sample = s.id AND s.tissue==? AND e.transcript==t.id AND t.transcript_id==?;"
-            res = cur.execute(statement, (tissue['value'], transcript))
+            res = con.execute(statement, (tissue['value'], transcript))
             df_result = pd.DataFrame(res.fetchall())
             df_result.columns= ['tissue', 'sample', 'TPM']
 
-            #append a column transcript_tissue to df_result 
+            #append a column transcript_tissue to df_result
             df_tissue[transcript+'_tissue'] = df_result['tissue']
             #append a column transcript_sample to df_result
             df_tissue[transcript+'_sample'] = df_result['sample']
             #append a column transcript_TPM to df_result
             df_tissue[transcript+'_TPM'] = df_result['TPM']
 
-        #append df_tissue to df_final 
+        #append df_tissue to df_final
         df_final.append(df_tissue)
     #drop every column including "tissue" in the name except the first one
     df_final = pd.concat(df_final)
@@ -1952,7 +1944,7 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
 
 @app.callback(
     Output("all-tissues-dropdown", "value"),
-    Input("all-tissues-button", "n_clicks"), 
+    Input("all-tissues-button", "n_clicks"),
     prevent_initial_call=True,
 )
 def selectAllTissues(n_clicks):
@@ -1974,13 +1966,13 @@ def selectAllTissues(n_clicks):
 
 
 @app.callback(
-        Output("download", "data"), 
-        [Input("btn", "n_clicks")], 
-        [State("search-output-ref-geneA", "data")], 
+        Output("download", "data"),
+        [Input("btn", "n_clicks")],
+        [State("search-output-ref-geneA", "data")],
         prevent_initial_call=True
 )
 def download_table_transcripts(n_clicks: int, data: list[dict[str, any]]) -> dict[str, str]:
-    """Downloads the data in search-output-ref-geneA as a tsv file 
+    """Downloads the data in search-output-ref-geneA as a tsv file
     by clicking on the button btn.
 
     Args:
@@ -1989,7 +1981,7 @@ def download_table_transcripts(n_clicks: int, data: list[dict[str, any]]) -> dic
 
     Returns:
         dict: dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
-    
+
     Raises:
         ValueError: If data is not in the expected format or 'gene_name' column is missing.
     """
@@ -2007,9 +1999,9 @@ def download_table_transcripts(n_clicks: int, data: list[dict[str, any]]) -> dic
     return dict(content=df.to_csv(sep="\t", index=False),filename=gene_names+"_data.tsv")
 
 @app.callback(
-        Output("download-exon", "data"), 
-        [Input("btn-exon", "n_clicks")], 
-        [State("search-output-exon", "data")], 
+        Output("download-exon", "data"),
+        [Input("btn-exon", "n_clicks")],
+        [State("search-output-exon", "data")],
         prevent_initial_call=True
 )
 def download_table_exons(n_clicks, data):
@@ -2022,13 +2014,13 @@ def download_table_exons(n_clicks, data):
 
     Returns:
         dict: dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
-    """    
+    """
     df = pd.DataFrame.from_records(data)
     return dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
 
 @app.callback(
-        Output("download-transcript-id", "data"), 
-        [Input("btn-transcript-id", "n_clicks")], 
+        Output("download-transcript-id", "data"),
+        [Input("btn-transcript-id", "n_clicks")],
         [State("search-output-transcript-id", "data")],
         prevent_initial_call=True
 )
@@ -2042,7 +2034,7 @@ def download_table_transcripts_from_transcript_id(n_clicks, data):
 
     Returns:
         dict: dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
-    """    
+    """
     df = pd.DataFrame.from_records(data)
     return dict(content=df.to_csv(sep="\t", index=False),filename="data.tsv")
 
@@ -2061,10 +2053,10 @@ def update_options(search_value):
 
     Returns:
         list: list of genes
-    """    
+    """
     if not search_value:
         raise exceptions.PreventUpdate
-    
+
     # Convert the search_value to uppercase (since your default is uppercase)
     search_value_upper = search_value.upper()
 
@@ -2075,7 +2067,7 @@ def update_options(search_value):
 @app.callback(
    Output('download-cDNA','data'),
    [Input('mRNA-button', 'n_clicks')],
-   [State('my-dynamic-dropdown', 'value')], 
+   [State('my-dynamic-dropdown', 'value')],
    prevent_initial_call=True,
 )
 def downloadmRNA(n_clicks, value):
@@ -2087,18 +2079,18 @@ def downloadmRNA(n_clicks, value):
 
     Returns:
         dict: mRNA sequences in a fasta file
-    """    
+    """
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
         mRNA = get_mRNA_from_gene_id(value)
         fasta = ''.join([ ">"+key+"\n"+mRNA[key]+"\n" for key in mRNA ])
-        return dict(content=fasta,filename="mRNA"+value+".fasta")
+        return dict(content=fasta,filename="mRNA_"+value+".fasta")
 
 @app.callback(
    Output('download-proteins','data'),
    [Input('protein-button', 'n_clicks')],
-   State('my-dynamic-dropdown', 'value'), 
+   State('my-dynamic-dropdown', 'value'),
    prevent_initial_call=True,
 )
 def downloadProteins(n_clicks,value):
@@ -2110,7 +2102,7 @@ def downloadProteins(n_clicks,value):
 
     Returns:
         dict: proteins in a fasta file
-    """    
+    """
     print("----download proteins----")
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
@@ -2118,11 +2110,11 @@ def downloadProteins(n_clicks,value):
         proteins = get_proteins_by_gene(value)
         fasta = ''.join([ ">"+key+"\n"+str(proteins[key])+"\n" for key in proteins ])
         return dict(content=fasta,filename="proteins_"+value+".fasta")
-    
+
 @app.callback(
    Output('download-domains','data'),
    [Input('domains-button', 'n_clicks')],
-   State('my-dynamic-dropdown', 'value'), 
+   State('my-dynamic-dropdown', 'value'),
    prevent_initial_call=True,
 )
 def downloadDomains(n_clicks,value):
@@ -2135,7 +2127,7 @@ def downloadDomains(n_clicks,value):
 
     Returns:
         dict: protein_domains as tsv file
-    """    
+    """
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     else:
@@ -2144,10 +2136,10 @@ def downloadDomains(n_clicks,value):
                                      (select sum(min(e.end,t.cds_start) - min(e.start,t.cds_start))
                                       from exons e where e.transcript=t.id),
                                      t.cds_start, t.cds_end
-                              from transcripts t, domains d 
+                              from transcripts t, domains d
                               where t.id=d.transcript and t.gene_name=?""", (value,) )
 
-        tsv = "transcript\tdomain\tstart\tend\n" 
+        tsv = "transcript\tdomain\tstart\tend\n"
 
         # At this point, we have coordinates for the domains in terms of
         # offsets on the mRNA sequence, but on the forward strand of the
@@ -2169,9 +2161,9 @@ def downloadDomains(n_clicks,value):
         return dict(content=tsv,filename="domains_"+value+".tsv")
 
 @app.callback(
-    [Output('search-output-gene-id','data'), 
-     Output('search-output-gene-id','columns'), 
-     Output('gene-id-err','children')],  
+    [Output('search-output-gene-id','data'),
+     Output('search-output-gene-id','columns'),
+     Output('gene-id-err','children')],
      Input('gene-id', 'value')
 )
 def get_transcripts_from_gene_id(input_value):
@@ -2205,9 +2197,9 @@ def get_transcripts_from_gene_id(input_value):
         return (data, columns, '')
 
 @app.callback(
-    [Output('search-output-transcript-id','data'), 
-     Output('search-output-transcript-id','columns'), 
-     Output('transcript-id-err','children')],  
+    [Output('search-output-transcript-id','data'),
+     Output('search-output-transcript-id','columns'),
+     Output('transcript-id-err','children')],
      Input('transcript-id', 'value')
 )
 def get_exon_infomration_from_transcript_id(input_value):
@@ -2221,13 +2213,13 @@ def get_exon_infomration_from_transcript_id(input_value):
 
     Returns:
         (data, columns, ''): data and columns for the table and an empty string for the error message
-    """    
+    """
     statement_get_exon_structure = "SELECT e.sequence_number, e.chrom, e.start, e.end, e.strand from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-    
+
     if input_value is None:
         raise exceptions.PreventUpdate
     print("----Get exon structure from transcript_id----")
-    
+
     con = create_connection()
     cur = con.cursor()
     res = cur.execute(statement_get_exon_structure, [input_value])
@@ -2245,13 +2237,13 @@ def get_exon_infomration_from_transcript_id(input_value):
 
 #### search by exon chr:start:end
 @app.callback(
-   [Output('search-output-exon','data'), 
-    Output('search-output-exon','columns'),  
+   [Output('search-output-exon','data'),
+    Output('search-output-exon','columns'),
     Output('output-exon-err','children')],
     Input('my-button', 'n_clicks'),
-    [State('text-chro', 'value'), 
-     State('text-start','value'), 
-     State('text-stop','value'), 
+    [State('text-chro', 'value'),
+     State('text-start','value'),
+     State('text-stop','value'),
      State('text-strand','value')]
 )
 def updateExonSearch(n_clicks, chro, start, stop, strand):
@@ -2263,7 +2255,7 @@ def updateExonSearch(n_clicks, chro, start, stop, strand):
         chro (string): chromosome
         start (string): start position on genome
         stop (string): stop position on genome
-        strand (string): strand where the exons lays on 
+        strand (string): strand where the exons lays on
 
     Returns:
         (data, columns, ''): data and columns for the table and an empty string for the error message
@@ -2291,13 +2283,13 @@ def updateExonSearch(n_clicks, chro, start, stop, strand):
                 return (data, columns, '')
         else:
             return (no_update, no_update, '')
-        
+
 @app.callback(
-        [Output('table-sql-output','data'), 
-        Output('table-sql-output','columns'), 
-        Output('sql-warning','children')], 
-        [Input('sql-button','n_clicks')], 
-        State('sql-input', 'value'), 
+        [Output('table-sql-output','data'),
+        Output('table-sql-output','columns'),
+        Output('sql-warning','children')],
+        [Input('sql-button','n_clicks')],
+        State('sql-input', 'value'),
         prevent_initial_call=True
 )
 def run_sql_statement(n_clicks, value):
@@ -2309,7 +2301,7 @@ def run_sql_statement(n_clicks, value):
 
     Returns:
         (list, list, string): data, columns, warning
-    """    
+    """
     if n_clicks != 0:
         print("----Run SQL statement----")
         print(value)
@@ -2318,7 +2310,7 @@ def run_sql_statement(n_clicks, value):
         # if any of the words in list is in value.lower() return error
         if any(x in value.lower() for x in list):
             return (no_update, no_update, "SQL statement not valid: drop/delete or update/insert not allowed")
-        
+
         con = create_connection()
         cur = con.cursor()
         #try execute sql statement else return error
@@ -2329,7 +2321,7 @@ def run_sql_statement(n_clicks, value):
         #if sql statement is valid, return data
         df = pd.DataFrame(res.fetchall())
         if df.empty:
-            #return empty data table 
+            #return empty data table
             con.close()
             return  ([], [], "No data found")
         else:
@@ -2339,32 +2331,32 @@ def run_sql_statement(n_clicks, value):
             data = df.to_dict('records')
             con.close()
             return (data, columns, "")
-        
+
 
 # ! Main and most important callback in the app
 @app.callback(
-   [Output('search-output-ref-geneA','data'), 
-    Output('search-output-ref-geneA','columns'), 
-    Output('gene-png','src'), 
+   [Output('search-output-ref-geneA','data'),
+    Output('search-output-ref-geneA','columns'),
+    Output('gene-png','src'),
     Output('no-groups-warning','children'),
-    Output('start','value'), 
+    Output('start','value'),
     Output('stop','value'),
     Output('chrom','value'),
-    Output('strand','value'), 
-    Output('mutation','value'), 
+    Output('strand','value'),
+    Output('mutation','value'),
     Output('heatmap-relatives','figure'),
-    Output('heatmap-relatives-div','style'), 
-    Output('heatmap-absolutes','figure'), 
+    Output('heatmap-relatives-div','style'),
+    Output('heatmap-absolutes','figure'),
     Output('heatmap-absolutes-div','style')],
     [Input('transcript-button', 'n_clicks'),
-     Input('update-button', 'n_clicks')], 
-    [State('my-dynamic-dropdown', 'value'), 
-    State('groupA', 'children'), 
-    State('groupB','children'), 
-    State('start','value'), 
+     Input('update-button', 'n_clicks')],
+    [State('my-dynamic-dropdown', 'value'),
+    State('groupA', 'children'),
+    State('groupB','children'),
+    State('start','value'),
     State('stop','value'),
-    State('chrom','value'), 
-    State('strand','value'), 
+    State('chrom','value'),
+    State('strand','value'),
     State('mutation','value'),
     State('all-tissues-dropdown','value')],
     prevent_initial_call=True
@@ -2399,16 +2391,16 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
     Returns:
         data, columns, svg, warning, start, stop, chrom, strand, mutation, heatmap_relatives, heatmap_absolutes
     """
-    # either dropdown or start, stop, chrom als input 
+    # either dropdown or start, stop, chrom als input
     con = create_connection()
     triggered_id = ctx.triggered_id #check if update-button or search-button is triggered
- 
+
     if triggered_id == 'transcript-button': #if search-search button is triggered
-        #split inpute value for _ 
-        if input_value is None: #if input gene is none 
+        #split inpute value for _
+        if input_value is None: #if input gene is none
             print("--input gene None--")
             raise exceptions.PreventUpdate
-        elif tissue_dropdown is not None: 
+        elif tissue_dropdown is not None:
             print("--across tissues--")
             cur = con.cursor()
             statement = "SELECT DISTINCT t.gene_id FROM transcripts as t WHERE t.ref_gene_id=?"
@@ -2418,11 +2410,11 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 print("no Update")
                 con.close()
                 raise exceptions.PreventUpdate
-                       
+
             gene_id = df_result.iloc[0][0]
             result_df = pd.DataFrame()
             result_df = get_TPM_from_tissues(gene_id, tissue_dropdown)
-            
+
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(result_df, True)
             heatmap_abs = generate_heatmap(result_df, False)
@@ -2432,12 +2424,12 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
 
             #add nhref for each transcript_id in NCBI
             columns, data = transform_to_columns_and_data(result_df)
-            
+
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
             # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
-            #if user did not select group A or B then present only transcripts in search-output-ref-geneA 
+            #if user did not select group A or B then present only transcripts in search-output-ref-geneA
             if ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None) or ((groupA or groupB) == "") or ((groupA or groupB) == "[]") or ((groupA or groupB) == "None"):
                 print("--no groups selected--")
                 # input_value = input_value.split(" ")[0]
@@ -2493,13 +2485,13 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 heatmap_abs = generate_heatmap(df_result, False)
 
                 columns, data = transform_to_columns_and_data(df_result)
-                        
+
                 con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
                 return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
-        
-        
+
+
     elif triggered_id == 'update-button': #if update-button is triggered
         # if tissue_dropdown is None:
         #     print("no tissues selected but update view")
@@ -2519,7 +2511,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
-            
+
             columns, data = transform_to_columns_and_data(df_result)
 
             con.close()
@@ -2559,7 +2551,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
 
 # start the server of the  app
-server = app.server 
+server = app.server
 
 # run the app
 if __name__ == '__main__':
