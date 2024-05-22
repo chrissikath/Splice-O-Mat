@@ -30,12 +30,9 @@ import json
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
-#################### 1.0 Helper Functions ############################
-####### configuration #######
-database_file = "/var/cache/stringtie.db"
-genome_file = "/var/cache/GRCh38.2bit"
-url_base_pathname = "/Splice-O-Mat/"
+from config import *
 
+#################### 1.0 Helper Functions ############################
 ####### helper functions #######
 class StdevFunc:
     """

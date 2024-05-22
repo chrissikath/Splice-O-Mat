@@ -1,0 +1,4 @@
+####### configuration #######
+database_file = "stringtie.db"
+genome_file = "GRCh38.2bit"
+url_base_pathname = "/Splice-O-Mat/"
