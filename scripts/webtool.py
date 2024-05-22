@@ -163,7 +163,7 @@ def transform_to_columns_and_data(result_df, exon_number=True):
                                                       else row[col] for col in result_df.columns}, axis=1).tolist())
 
     if exon_number:
-        number_inner_exons = calculate_inner_exons(result_df["gene_id"][0])
+        number_inner_exons = calculate_inner_exons(result_df["gene_name"][0])
         result_df.loc[-1] = "" * len(result_df.columns)  # adding a row
         result_df.loc[-1, "# of exons"] = number_inner_exons
 
@@ -666,70 +666,59 @@ def get_proteins(transcript_ids):
     return proteins
 
 
-def get_proteins_by_gene(ref_gene_id):
-    """ Get all proteins from all transcripts corresponding to ref_gene_id
-    # TODO - ? change ref_gene_id to gene_name ? 
+def get_proteins_by_gene(gene_name):
+    """ Get all proteins from all transcripts corresponding to gene_name
 
     Args:
-        gene_id (string): gene_id like "NSTRG.1"
+        gene_name (string): gene name like "NSTRG.1" or "BRCA2"
 
     Raises:
-        exceptions.PreventUpdate: if no ref_gene_id was found
+        exceptions.PreventUpdate: if gene_name was not found
 
     Returns:
         (dict): maps transcript_ids to their protein sequences
     """
-    print("---- get_proteins_by_gene from all transcript corresponding from gene_id ----")
-    statement_get_all_transcripts = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
-    # statement_get_all_transcripts = "SELECT gene_id,transcript_id FROM transcripts WHERE gene_name=?"    
-    if ref_gene_id is None:
+    print("---- get_proteins_by_gene from all transcript corresponding from gene_name ----")
+    statement_get_all_transcripts = "SELECT transcript_id FROM transcripts WHERE gene_name=?"
+    if gene_name is None:
         raise exceptions.PreventUpdate
     con = create_connection()
-    res = con.execute(statement_get_all_transcripts, [ref_gene_id])
-    df = pd.DataFrame(res.fetchall())
+    res = con.execute(statement_get_all_transcripts, [gene_name])
+    tids = res.fetchall()
     con.close()
 
-    if df.empty:
-        return (no_update, no_update, "Not available")
+    if tids:
+        return get_proteins([t for (t,) in tids])
     else:
-        df.columns = ["gene_id","transcript_id"]
-        return get_proteins(df["transcript_id"])
+        return (no_update, no_update, "Not available")
 
 
-def get_mRNA_from_gene_id(ref_gene_id):
-    """Get all proteins from all transcripts corresponding to ref_gene_id
-    # TODO - ? change ref_gene_id to gene_name ? 
+def get_mRNA_from_gene_id(gene_name):
+    """Get all proteins from all transcripts corresponding to gene_name
 
     Args:
-        gene_id (string): gene_id like "NSTRG.1"
+        gene_name (string): gene name like "NSTRG.1" or "BRCA2"
 
     Raises:
-        exceptions.PreventUpdate: if no ref_gene_id was found
+        exceptions.PreventUpdate: if gene_name was not foundd
 
     Returns:
         (dict): maps transcript_id to cDNA sequence
     """
-    print("---- get cDNA from all transcript corresponding from gene_id ----")
+    print("---- get cDNA from all transcript corresponding from gene_name ----")
     proteins = ""
-    statement_get_all_transcripts = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
-    # statement_get_all_transcripts = "SELECT gene_id,transcript_id FROM transcripts WHERE gene_name=?"    
-    if ref_gene_id is None:
+    statement_get_all_transcripts = "SELECT transcript_id FROM transcripts WHERE gene_name=?"
+    if gene_name is None:
         raise exceptions.PreventUpdate
     con = create_connection()
     cur = con.cursor()
-    res = cur.execute(statement_get_all_transcripts, [ref_gene_id])
-    df = pd.DataFrame(res.fetchall())
-    if df.empty:
-        con.close()
-        return (no_update, no_update, "Not available")
+    res = cur.execute(statement_get_all_transcripts, [gene_name])
+    tids = res.fetchall()
+    con.close()
+    if tids:
+        return get_cDNA([t for (t,) in tids])
     else:
-        df.columns = ["gene_id","transcript_id"]
-        #get all transcipt_ids from df
-        transcripts = df["transcript_id"]
-        #get cDNA of transcripts
-        cDNA = get_cDNA(transcripts)
-        con.close()
-        return cDNA
+        return (no_update, no_update, "Not available")
 
 
 def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
@@ -747,21 +736,16 @@ def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
     con = create_connection()
     cur = con.cursor()
     if strand:
-        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
+        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
         res = cur.execute(statement,(start,stop,chrom,strand))
     else:
-        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
+        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
         res = cur.execute(statement,(start,stop,chrom))
 
     df = pd.DataFrame(res.fetchall())
-    if df.empty:
-        con.close()
-        return df
-    else: 
-        columns = ["gene_id","gene_name","transcript_id", "ref_gene_id"]
-        df.columns = columns
-        con.close()
-        return (df)
+    df.columns = ["gene_id","gene_name","transcript_id"]
+    con.close()
+    return df
 
 def get_TPM_from_tissues(gene_id, tissues):
     """Get TPMs for all transcripts in given tissues for given gene_id
@@ -940,11 +924,11 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
 
     return df_result
 
-def get_group_comparisons_from_gene_id(gene_id, groupA, groupB):
-    """Get TPMs for all transcripts in given groupA and groupB for given gene_id
+def get_group_comparisons_from_gene_id(gene_name, groupA, groupB):
+    """Get TPMs for all transcripts in given groupA and groupB for given gene name
 
     Args:
-        gene_id (string): gene_id like "NSTRG.1"
+        gene_name (string): gene name like "NSTRG.1" or "BARD1"
         groupA (list): list of samples (strings) or tissues (strings)
         groupB (list): list of samples (strings) or tissues (strings)
 
@@ -958,28 +942,28 @@ def get_group_comparisons_from_gene_id(gene_id, groupA, groupB):
     if (groupA[0]).startswith("SRR") and (groupB[0]).startswith("SRR") :
         print("SRAs")
         print("Calculate TPMs over groups" ,datetime.datetime.now())
-        statement_A = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.name IN (" + ",".join(["?"] * len(groupA)) + ")  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
-        statement_B = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.name IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
+        statement_A = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.name IN (" + ",".join(["?"] * len(groupA)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+        statement_B = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.name IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
     else:
         print("tissues")
         #print current time
         print("Calculate TPMs over groups" ,datetime.datetime.now())
-        statement_A = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupA)) + ")  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
-        statement_B = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
-    
-    groupA.append(gene_id)
+        statement_A = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupA)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+        statement_B = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+
+    groupA.append(gene_name)
     res = cur.execute(statement_A, (groupA))
     print("group: ",groupA ,datetime.datetime.now())
     df_A = pd.DataFrame(res.fetchall())
-    df_A.columns = ["gene_id","gene_name","transcript_id","TPM(mean)A", "TPM(sd)A"]
+    df_A.columns = ["gene_name","transcript_id","TPM(mean)A", "TPM(sd)A"]
 
-    groupB.append(gene_id)
+    groupB.append(gene_name)
     res = cur.execute(statement_B, (groupB))
     print("group: ",groupB ,datetime.datetime.now())
     df_B = pd.DataFrame(res.fetchall())
-    df_B.columns = ["gene_id","gene_name","transcript_id","TPM(mean)B", "TPM(sd)B"]
+    df_B.columns = ["gene_name","transcript_id","TPM(mean)B", "TPM(sd)B"]
     df_result = pd.merge(df_A,df_B)
-    
+
     return df_result
 
 def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
@@ -1013,7 +997,7 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
 
         statement_A = "\
             SELECT \
-                t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
+                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
             AS \
                 stdev_tpm FROM transcripts AS t \
             JOIN expresses AS e ON t.id = e.transcript \
@@ -1021,10 +1005,10 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
             WHERE \
                 s.name IN (" + ",".join(["?"] * len(groupA)) + ") \
                 AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_id, t.gene_name, t.transcript_id;"        
+            GROUP BY t.gene_name, t.transcript_id;"
         statement_B = "\
             SELECT \
-                t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
+                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
             AS \
                 stdev_tpm FROM transcripts AS t \
             JOIN expresses AS e ON t.id = e.transcript \
@@ -1032,8 +1016,8 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
             WHERE \
                 s.name IN (" + ",".join(["?"] * len(groupB)) + ") \
                 AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_id, t.gene_name, t.transcript_id;"
-    
+            GROUP BY t.gene_name, t.transcript_id;"
+
     else:
         print("tissues")
         #print current time
@@ -1049,7 +1033,7 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
             groupB[i] = groupB[i].replace("['","")
             groupB[i] = groupB[i].replace("']","")
         statement_A = "SELECT \
-                t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
+                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
             AS \
                 stdev_tpm FROM transcripts AS t \
             JOIN expresses AS e ON t.id = e.transcript \
@@ -1057,9 +1041,9 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
             WHERE \
                 s.tissue IN (" + ",".join(["?"] * len(groupA)) + ") \
                 AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_id, t.gene_name, t.transcript_id;"
+            GROUP BY t.gene_name, t.transcript_id;"
         statement_B = "SELECT \
-                t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
+                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
             AS \
                 stdev_tpm FROM transcripts AS t \
             JOIN expresses AS e ON t.id = e.transcript \
@@ -1067,21 +1051,17 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
             WHERE \
                 s.tissue IN (" + ",".join(["?"] * len(groupB)) + ") \
                 AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_id, t.gene_name, t.transcript_id;"
-    
-    # convert groupA which looks like this "['brain', 'liver']" to a list like this ['brain', 'liver']
-    parameters_A = groupA + transcripts
-    print(parameters_A)
-    res = cur.execute(statement_A, (parameters_A))
+            GROUP BY t.gene_name, t.transcript_id;"
+
+    res = cur.execute(statement_A, groupA + transcripts)
     print("group: ", groupA ,datetime.datetime.now())
     df_A = pd.DataFrame(res.fetchall())
-    df_A.columns = ["gene_id","gene_name","transcript_id","TPM(mean)A", "TPM(sd)A"]
+    df_A.columns = ["gene_name","transcript_id","TPM(mean)A", "TPM(sd)A"]
 
-    parameters_B = groupB + transcripts
-    res = cur.execute(statement_B, (parameters_B))
+    res = cur.execute(statement_B, groupB + transcripts)
     print("group: ",groupB ,datetime.datetime.now())
     df_B = pd.DataFrame(res.fetchall())
-    df_B.columns = ["gene_id","gene_name","transcript_id","TPM(mean)B", "TPM(sd)B"]
+    df_B.columns = ["gene_name","transcript_id","TPM(mean)B", "TPM(sd)B"]
     df_result = pd.merge(df_A,df_B)
     return df_result
 
@@ -1130,38 +1110,37 @@ def calculate_percentage_for_TPM(df_result):
     sum_gene_TPM_A = df_result['TPM(mean)A'].sum()
     df_result['TPM(%)A'] = (df_result['TPM(mean)A']/sum_gene_TPM_A)*100
     sum_gene_TPM_B = df_result['TPM(mean)B'].sum()
-    df_result['TPM(%)B'] = (df_result['TPM(mean)B']/sum_gene_TPM_B)*100                       
-    
+    df_result['TPM(%)B'] = (df_result['TPM(mean)B']/sum_gene_TPM_B)*100
+
     #round TPM values
     df_result = df_result.round({'TPM(mean)A': 3, 'TPM(%)A':1,'TPM(mean)B': 3, 'TPM(%)B':1, 'TPM(sd)A':3, 'TPM(sd)B':3})
     # sort columns of df_result by 'TPM(mean)A', 'TPM(%)A', 'TPM(mean)B', 'TPM(%)B'
-    df_result = df_result.reindex(['gene_id','gene_name','transcript_id','length (bp)','start','end','# of exons','TPM(mean)A','TPM(sd)A','TPM(%)A', 'TPM(mean)B','TPM(sd)B','TPM(%)B'], axis=1)  
+    df_result = df_result.reindex(['gene_name','transcript_id','length (bp)','start','end','# of exons','TPM(mean)A','TPM(sd)A','TPM(%)A', 'TPM(mean)B','TPM(sd)B','TPM(%)B'], axis=1)
     con.close()
     return (df_result)
 
-def calculate_inner_exons(gene_id):
-    """Calculate inner exons for each transcript of gene_id
-    this means only exons except first and last exon
+def calculate_inner_exons(gene_name):
+    """Calculate the number of distict inner exons for a gene.
+    Each transcript contributes all its exons, except the first and last.  Exons with identical coordinates count only once.
     this was a wish from Torsten Schoeneberg
 
     XXX Isn't this a job for SQL?
 
     Args:
-        gene_id (string): gene_id of gene
-    """    
+        gene_name (string): name of gene
+    """
     con = create_connection()
     cur = con.cursor()
 
-    #get all exons of gene_id from database
-    statement = "SELECT t.transcript_id, e.sequence_number, e.start, e.end FROM exons as e, transcripts as t WHERE e.transcript == t.id AND t.gene_id = ?"
-    cur.execute(statement, (gene_id,))
+    statement = "SELECT t.transcript_id, e.sequence_number, e.start, e.end FROM exons as e, transcripts as t WHERE e.transcript == t.id AND t.gene_name = ?"
+    cur.execute(statement, (gene_name,))
     rows = cur.fetchall()
-    df = pd.DataFrame(rows, columns=['transcipt_id','sequence_number', 'start', 'end'])
+    df = pd.DataFrame(rows, columns=['transcript_id','sequence_number', 'start', 'end'])
     #generate for each new transcript_id in df a new dataframe
-    result_df = [] 
-    for transcript_id in df['transcipt_id'].unique():
-        #get subset of df for transcript_id 
-        df_subset = df[df['transcipt_id'] == transcript_id]
+    result_df = []
+    for transcript_id in df['transcript_id'].unique():
+        #get subset of df for transcript_id
+        df_subset = df[df['transcript_id'] == transcript_id]
         #delete first and last entry in df_subset
         df_subset = df_subset.iloc[1:-1]
         #add df_subset to result_df
@@ -1571,7 +1550,7 @@ popover_transcripts_by_region= "The user can specify a region (chromosome, start
 tab1_content_transcripts = dbc.Card(
     dbc.CardBody([
             dbc.Row([
-            html.H6('Show transcripts by gene_id'),
+            html.H6('Show transcripts by gene name'),
             ]),
             dbc.Button(
                         "Info",
@@ -2167,7 +2146,7 @@ def downloadDomains(n_clicks,value):
      Input('gene-id', 'value')
 )
 def get_transcripts_from_gene_id(input_value):
-    """ Callback function to get all transcripts from a gene_id
+    """ Callback function to get all transcripts from a gene name
 
     Args:
         input_value (string): gene name from input field
@@ -2177,23 +2156,22 @@ def get_transcripts_from_gene_id(input_value):
 
     Returns:
         (data, columns, ""): returns the data and columns for the table and an empty string for the error message
-    """    
-    statement_get_all_transcripts = "SELECT gene_id,gene_name,transcript_id,ref_gene_id FROM transcripts WHERE gene_id=?"    
+    """
+    statement_get_all_transcripts = "SELECT gene_name,transcript_id FROM transcripts WHERE gene_name=?"
     if input_value is None:
         raise exceptions.PreventUpdate
-    print("----Get transcripts from gene_id----")
+    print("----Get transcripts from gene_name----")
     con = create_connection()
     cur = con.cursor()
     res = cur.execute(statement_get_all_transcripts, [input_value])
     df = pd.DataFrame(res.fetchall())
+    con.close()
     if df.empty:
-        con.close()
         return (no_update, no_update, "Not available")
     else:
-        df.columns = ["gene_id","gene_name","transcript_id","ref_gene_id"]
+        df.columns = ["gene_name","transcript_id"]
         columns = [{"name": i, "id": i} for i in df.columns]
         data = df.to_dict('records')
-        con.close()
         return (data, columns, '')
 
 @app.callback(
@@ -2259,8 +2237,8 @@ def updateExonSearch(n_clicks, chro, start, stop, strand):
 
     Returns:
         (data, columns, ''): data and columns for the table and an empty string for the error message
-    """    
-    statement = "SELECT DISTINCT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts as t, exons as e WHERE t.id=e.transcript AND e.start>=? AND e.end<=? AND e.start<? AND e.chrom=? AND e.strand=?"
+    """
+    statement = "SELECT DISTINCT t.gene_name, t.transcript_id FROM transcripts as t, exons as e WHERE t.id=e.transcript AND e.start>=? AND e.end<=? AND e.start<? AND e.chrom=? AND e.strand=?"
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update, no_update, '')
     if n_clicks is not None:
@@ -2274,8 +2252,8 @@ def updateExonSearch(n_clicks, chro, start, stop, strand):
             if df.empty:
                 con.close()
                 return (no_update, no_update, "Not available")
-            else: 
-                columns = ["gene_id","gene_name","transcript_id", "ref_gene_id"]
+            else:
+                columns = ["gene_name","transcript_id"]
                 df.columns = columns
                 columns = [{"name": i, "id":i } for i in df.columns]
                 data = df.to_dict('records')
@@ -2361,13 +2339,13 @@ def run_sql_statement(n_clicks, value):
     State('all-tissues-dropdown','value')],
     prevent_initial_call=True
 )
-def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_clicks, input_value, groupA, groupB, start, stop, chrom, strand, mutation, tissue_dropdown):
-    """Get all transcripts from ref gene id then update svg.
+def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, input_value, groupA, groupB, start, stop, chrom, strand, mutation, tissue_dropdown):
+    """Get all transcripts from gene name, then update svg.
     If no groups are selected: without TPMs
     If groups are selected: with TPMs
     If all-tissues-dropdown is not empty: with TPMs for all tissues
 
-    If Transcript-button is clicked: get all transcripts from ref gene id and calculate new SVG
+    If Transcript-button is clicked: get all transcripts from gene name and calculate new SVG
     If Update-button is clicked: insert mutation or new start, end postition and update SVG
 
     Args:
@@ -2403,7 +2381,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
         elif tissue_dropdown is not None:
             print("--across tissues--")
             cur = con.cursor()
-            statement = "SELECT DISTINCT t.gene_id FROM transcripts as t WHERE t.ref_gene_id=?"
+            statement = "SELECT DISTINCT t.gene_id FROM transcripts as t WHERE t.gene_name=?"
             res = cur.execute(statement, [input_value])
             df_result = pd.DataFrame(res.fetchall())
             if df_result.empty:
@@ -2435,13 +2413,12 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 # input_value = input_value.split(" ")[0]
                 cur = con.cursor()
                 #get all transcripts with gene id and gene name over ref gene id
-                statement_get_all_transcripts_from_ref_gene_id = "SELECT DISTINCT t2.gene_name, t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
-                res = cur.execute(statement_get_all_transcripts_from_ref_gene_id, [input_value])
+                statement_get_all_transcripts_from_gene = "SELECT DISTINCT gene_name, transcript_id FROM transcripts WHERE gene_name=? ORDER BY transcript_id"
+                res = cur.execute(statement_get_all_transcripts_from_gene, [input_value])
                 df = pd.DataFrame(res.fetchall())
-                transcripts = df[2]
-                df.columns = ["gene_name","gene_id","transcript_id"]
+                transcripts = df[1]
+                df.columns = ["gene_name","transcript_id"]
                 #sort df by transcript_id
-                df = df.sort_values(by=['transcript_id'])
                 columns, data = transform_to_columns_and_data(df, False)
 
                 con.close()
@@ -2465,21 +2442,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
                 print(groupA)
                 print(groupB)
 
-                cur = con.cursor()
-                #get gene id
-                statement = "SELECT DISTINCT t.gene_id FROM transcripts as t WHERE t.ref_gene_id=?"
-                res = cur.execute(statement, [input_value])
-                df_result = pd.DataFrame(res.fetchall())
-                if df_result.empty:
-                    print("no Update")
-                    con.close()
-                    raise exceptions.PreventUpdate
-                       
-                gene_id = df_result.iloc[0][0]
-                merged_df = pd.DataFrame(columns=['gene_id', 'gene_name', 'transcript_id', 'TPM(mean)A', 'TPM(mean)B'])
-                merged_df = get_group_comparisons_from_gene_id(gene_id, groupA, groupB)     
+                merged_df = get_group_comparisons_from_gene_id(input_value, groupA, groupB)
                 df_result = calculate_percentage_for_TPM(merged_df)
-                #sort df_result by transcript_id
                 df_result = df_result.sort_values(by=['transcript_id'])
                 heatmap_rel = generate_heatmap(df_result, True)
                 heatmap_abs = generate_heatmap(df_result, False)
@@ -2504,11 +2468,8 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
             print(transcripts)
             if transcripts.empty:
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
-            #get list of transcript_id from transcripts
-            transcript_ids = transcripts["transcript_id"]
-            # for gene_id in set(transcripts["gene_id"]):
-            df_result = get_TPM_from_tissues_over_transcripts(transcript_ids, tissue_dropdown)
-            #generate heatmap with all tissues and transcripts
+            df_result = get_TPM_from_tissues_over_transcripts(transcripts["transcript_id"], tissue_dropdown)
+            # generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(df_result, True)
             heatmap_abs = generate_heatmap(df_result, False)
 
