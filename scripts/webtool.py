@@ -2490,15 +2490,14 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
             columns = [{"name": i, "id":i } for i in df_result.columns]
             data = df_result.to_dict('records')
             start_result, stop_results, chrom_results, strand_results, drawing = generate_svg(df_result["transcript_id"], mutation)
-            return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'})
+            return (data, columns, b64_svg(drawing), "Updated", start, stop, chrom, strand, mutation, None, {'display': 'none'}, None, {'display': 'none'})
         else:
             print("--groups selected--")
             transcripts = get_transcripts_by_gennomics_pos(chrom, start, stop, strand)
             if transcripts.empty:
                 return ([], [], None, "No transcript found for genomic region", start, stop, chrom, strand, mutation, None,{'display': 'none'}, None, {'display': 'none'})
             print(transcripts)
-            transcript_ids = transcripts["transcript_id"]
-            df_result = get_group_comparisons_over_transcripts(transcript_ids, groupA, groupB)
+            df_result = get_group_comparisons_over_transcripts([t for t in transcripts["transcript_id"]], groupA, groupB)
             df_result = calculate_percentage_for_TPM(df_result)
             df_result = df_result.sort_values(by=['transcript_id'])
             columns, data = transform_to_columns_and_data(df_result)
