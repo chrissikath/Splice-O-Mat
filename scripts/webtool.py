@@ -2243,7 +2243,6 @@ def updateExonSearch(n_clicks, chro, start, stop, strand):
             print("----Search for transcripts in genomic region----")
             con = create_connection()
             cur = con.cursor()
-            # TODO: check if it works with new query
             res = cur.execute(statement,(start,stop,stop, chro,strand))
             df = pd.DataFrame(res.fetchall())
             if df.empty:
