@@ -2,3 +2,4 @@
 database_file = "stringtie.db"
 genome_file = "GRCh38.2bit"
 url_base_pathname = "/Splice-O-Mat/"
+max_dropdown_options = 128

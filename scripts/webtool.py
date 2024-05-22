@@ -2030,14 +2030,14 @@ def update_options(search_value):
     Returns:
         list: list of genes
     """
+
     if not search_value:
         raise exceptions.PreventUpdate
 
-    # Convert the search_value to uppercase (since your default is uppercase)
     search_value_upper = search_value.upper()
+    # filter, then limit to a reasonable number to keep the UI responsive
+    return [o for o in ref_gene_names if search_value_upper in o["label"]][0:max_dropdown_options-1:]
 
-    # Use a case-insensitive comparison
-    return [o for o in ref_gene_names if search_value_upper in o["label"]]
 
 ### download cDNAs
 @app.callback(

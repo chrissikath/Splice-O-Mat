@@ -2,11 +2,6 @@
 
 Random observations, things that could be fixed.
 
-## my-dynamic-dropdown is slow
-
-This is a substring search over a python list.  SQLite can do this
-instead (LIKE '%...%'), and if the substring search is replaced witha
-prefix search (LIKE '...%'), it should be a lot faster.
 
 ## download\_table\_TPMS\_without\_means is strange
 
