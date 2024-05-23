@@ -690,7 +690,7 @@ def get_proteins_by_gene(gene_name):
         return (no_update, no_update, "Not available")
 
 
-def get_mRNA_from_gene_id(gene_name):
+def get_mRNA_from_gene_name(gene_name):
     """Get all proteins from all transcripts corresponding to gene_name
 
     Args:
@@ -733,22 +733,22 @@ def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
     con = create_connection()
     cur = con.cursor()
     if strand:
-        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
+        statement = "SELECT t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
         res = cur.execute(statement,(start,stop,chrom,strand))
     else:
-        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
+        statement = "SELECT t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
         res = cur.execute(statement,(start,stop,chrom))
 
     df = pd.DataFrame(res.fetchall())
-    df.columns = ["gene_id","gene_name","transcript_id"]
+    df.columns = ["gene_name","transcript_id"]
     con.close()
     return df
 
-def get_TPM_from_tissues(gene_id, tissues):
-    """Get TPMs for all transcripts in given tissues for given gene_id
+def get_TPM_from_tissues(gene_name, tissues):
+    """Get TPMs for all transcripts in given tissues for given gene name
 
     Args:
-        gene_id (string): gene_id like "NSTRG.1"
+        gene_name (string): gene name like "NSTRG.1" or "BARD1"
         tissues (list): list of tissues (strings)
 
     Returns:
@@ -761,13 +761,15 @@ def get_TPM_from_tissues(gene_id, tissues):
     print("tissues")
     #print current time
     print("Calculate TPMs for each tissue" ,datetime.datetime.now())
+
+    # XXX  Shouldn't this whole loop be doable in a single SQL statement?
     df_result = pd.DataFrame()
     i = 0
     for tissue in tissues:
-        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
-        res = cur.execute(statement, (tissue, gene_id))
+        statement = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+        res = cur.execute(statement, (tissue, gene_name))
         df_A = pd.DataFrame(res.fetchall())
-        df_A.columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
+        df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
 
         #calculate the percentage of the TPM of the gene
         sum_gene_TPM = df_A["TPM(mean)"+tissue].sum()
@@ -777,11 +779,11 @@ def get_TPM_from_tissues(gene_id, tissues):
         #if NAN in df_A then replace with 0
         df_A = df_A.fillna(0)
         df_A = df_A.round({"TPM(mean)"+tissue: 3, tpm_percentage:1, "TPM(sd)"+tissue: 3})
-        df_A = df_A.reindex(columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue])
+        df_A = df_A.reindex(columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue])
 
         if i==0:
             df_result = df_A
-            df_result.columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue]
+            df_result.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue]
         else:
             df_result = df_result.merge(df_A)
         i += 1
@@ -791,7 +793,6 @@ def get_TPM_from_tissues(gene_id, tissues):
 
     # now get the length, number of exons, start and stop of each transcript
     con = create_connection()
-    cur = con.cursor()
 
     length_transcript = []
     start = []
@@ -800,8 +801,7 @@ def get_TPM_from_tissues(gene_id, tissues):
     for transcript in  df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-        cur = con.cursor()
-        res = cur.execute(statement_get_exon_structure, (transcript,))
+        res = con.execute(statement_get_exon_structure, (transcript,))
         df = pd.DataFrame(res.fetchall())
         columns = ["exon number", "start", "end"]
         df.columns = columns
@@ -853,17 +853,16 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     i = 0
     for tissue in tissues:
         print(tissue)
-        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
+        statement = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
             AS stdev_tpm FROM transcripts AS t \
             JOIN expresses AS e ON t.id = e.transcript \
             JOIN samples AS s ON e.sample = s.id \
             WHERE t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
             AND s.tissue = ? \
-            GROUP BY t.gene_id, t.gene_name, t.transcript_id;"
-        # statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_id=? GROUP BY t.transcript_id"
+            GROUP BY t.gene_name, t.transcript_id;"
         res = cur.execute(statement, [ t for t in transcripts ] + [tissue])
         df_A = pd.DataFrame(res.fetchall())
-        df_A.columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
+        df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
 
         #calculate the percentage of the TPM of the gene
         sum_gene_TPM = df_A["TPM(mean)"+tissue].sum()
@@ -873,11 +872,11 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
         #if NAN in df_A then replace with 0
         df_A = df_A.fillna(0)
         df_A = df_A.round({"TPM(mean)"+tissue: 3, tpm_percentage:1, "TPM(sd)"+tissue: 3})
-        df_A = df_A.reindex(columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue])
+        df_A = df_A.reindex(columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue])
 
         if i==0:
             df_result = df_A
-            df_result.columns = ["gene_id","gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue]
+            df_result.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue, "TPM(%)"+tissue]
         else:
             df_result = df_result.merge(df_A)
         i += 1
@@ -887,7 +886,6 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
 
     # now get the length, number of exons, start and stop of each transcript
     con = create_connection()
-    cur = con.cursor()
 
     length_transcript = []
     start = []
@@ -896,8 +894,7 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     for transcript in df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-        cur = con.cursor()
-        res = cur.execute(statement_get_exon_structure, (transcript,))
+        res = con.execute(statement_get_exon_structure, (transcript,))
         df = pd.DataFrame(res.fetchall())
         columns = ["exon number", "start", "end"]
         df.columns = columns
@@ -921,7 +918,7 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
 
     return df_result
 
-def get_group_comparisons_from_gene_id(gene_name, groupA, groupB):
+def get_group_comparisons_from_gene(gene_name, groupA, groupB):
     """Get TPMs for all transcripts in given groupA and groupB for given gene name
 
     Args:
@@ -1397,7 +1394,7 @@ card0 = dbc.Card([
 ])
 
 popover_step2_explanations = "The user can select a gene (based on the annotation of the NCBI hg38 human genome).\
-    The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_id) \
+    The plot and the output table show all transcripts (transcript_id) from this gene (assigned by stringtie over gene_name) \
     including known transcripts (RefSeq accessions NM, NR, XM, XR) and new transcripts (NSTRG, not already annotated in the NCBI annotation) of the selected gene. \
     NSTRG's were assigned to the gene derived from the annotated transcripts with which they overlapped the most. \
     This was done counting overlapping exonic bases."
@@ -1541,7 +1538,7 @@ card1 = dbc.Card([
     ])
 ])
 
-popover_gene_id_explanations = "The user can enter a gene_id. The output table shows all transcripts assigned to this gene_id."
+popover_gene_name_explanations = "The user can enter a gene_name. The output table shows all transcripts assigned to this gene_name."
 popover_transcripts_by_region= "The user can specify a region (chromosome, start [bp], stop [bp], strand; annotation used: NCBI hg38 human genome). The output table shows all transcripts that have an exon overlapping this region (see figure)."
 
 tab1_content_transcripts = dbc.Card(
@@ -1557,7 +1554,7 @@ tab1_content_transcripts = dbc.Card(
                         n_clicks=0,
                     ),
                     dbc.Popover(
-                        popover_gene_id_explanations,
+                        popover_gene_name_explanations,
                         target="hover-target-gene-id",
                         body=True,
                         trigger="hover",
@@ -2059,7 +2056,7 @@ def downloadmRNA(n_clicks, value):
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
-        mRNA = get_mRNA_from_gene_id(value)
+        mRNA = get_mRNA_from_gene_name(value)
         fasta = ''.join([ ">"+key+"\n"+mRNA[key]+"\n" for key in mRNA ])
         return dict(content=fasta,filename="mRNA_"+value+".fasta")
 
@@ -2142,7 +2139,7 @@ def downloadDomains(n_clicks,value):
      Output('gene-id-err','children')],
      Input('gene-id', 'value')
 )
-def get_transcripts_from_gene_id(input_value):
+def get_transcripts_from_gene(input_value):
     """ Callback function to get all transcripts from a gene name
 
     Args:
@@ -2376,18 +2373,7 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
             raise exceptions.PreventUpdate
         elif tissue_dropdown is not None:
             print("--across tissues--")
-            cur = con.cursor()
-            statement = "SELECT DISTINCT t.gene_id FROM transcripts as t WHERE t.gene_name=?"
-            res = cur.execute(statement, [input_value])
-            df_result = pd.DataFrame(res.fetchall())
-            if df_result.empty:
-                print("no Update")
-                con.close()
-                raise exceptions.PreventUpdate
-
-            gene_id = df_result.iloc[0][0]
-            result_df = pd.DataFrame()
-            result_df = get_TPM_from_tissues(gene_id, tissue_dropdown)
+            result_df = get_TPM_from_tissues(input_value, tissue_dropdown)
 
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(result_df, True)
@@ -2400,7 +2386,6 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
             columns, data = transform_to_columns_and_data(result_df)
 
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
-            # return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, b64_image(heatmap_rel), b64_image(heatmap_abs))
 
         else:
             #if user did not select group A or B then present only transcripts in search-output-ref-geneA
@@ -2438,7 +2423,7 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
                 print(groupA)
                 print(groupB)
 
-                merged_df = get_group_comparisons_from_gene_id(input_value, groupA, groupB)
+                merged_df = get_group_comparisons_from_gene(input_value, groupA, groupB)
                 df_result = calculate_percentage_for_TPM(merged_df)
                 df_result = df_result.sort_values(by=['transcript_id'])
                 heatmap_rel = generate_heatmap(df_result, True)
