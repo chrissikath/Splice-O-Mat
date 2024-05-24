@@ -32,13 +32,6 @@ antisense transcripts, too, but the diagram should clearly indicate
 theyr direction.
 
 
-## database is constantly reconnected
-
-Should check if holding one global connection works.  It may be necessary to
-set 'autocommit' or sprinkle explicit commits somewhere.  While at it, creating
-the cursor objects is usually pointless.
-
-
 ## convoluted code that could be SQL
 
 - calculate\_inner\_exons

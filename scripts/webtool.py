@@ -32,6 +32,7 @@ from matplotlib.lines import Line2D
 
 from config import *
 
+
 #################### 1.0 Helper Functions ############################
 ####### helper functions #######
 class StdevFunc:
@@ -57,6 +58,25 @@ class StdevFunc:
             return None
         return math.sqrt(self.S / (self.k-2))
 
+
+# create a database connection to the SQLite database
+
+# sqlite3 reports thread safety level "multithreaded", which means
+# check_same_thread=False should be safe.  isolation_level=None means not
+# implicit transactions are created.  We're only reading, so we don't need
+# them and they can only cause spurious locking issues.
+#
+# Using a global database object means we can extend and configure it
+# once, e.g. by defining functions or loading extensions.
+
+con = sqlite3.connect(database_file,check_same_thread=False,isolation_level=None)
+# con.enable_load_extension(True)
+# con.load_extension("./mod_array")
+# con.enable_load_extension(False)            # to prevent arbitrary SQL from loading more extensions
+con.create_aggregate("stdev", 1, StdevFunc)
+
+
+
 def fill_dropdowns_in_dash_application():
     """Fill all dropdowns in dash application at the beginning
     Fill main dropdown for gene selection (by gene_name) and
@@ -65,28 +85,25 @@ def fill_dropdowns_in_dash_application():
     Returns:
         list: gene_names, tissues_and_samples, tissues
     """
-    #connect with database
-    con = create_connection()
 
     print("----load genes names----")
     gene_names = set()
-    cur = con.cursor()
     # pipe with gen localization in dropdown
-    # res = cur.execute("SELECT t.gene_name, e.chrom, MIN(e.start) AS smallest_start, MAX(e.end) AS biggest_end FROM transcripts t JOIN exons e ON t.id = e.transcript GROUP BY t.gene_name")
+    # res = con.execute("SELECT t.gene_name, e.chrom, MIN(e.start) AS smallest_start, MAX(e.end) AS biggest_end FROM transcripts t JOIN exons e ON t.id = e.transcript GROUP BY t.gene_name")
     # pipe without gen localization in dropdown
-    res = cur.execute("SELECT DISTINCT gene_name FROM transcripts WHERE gene_name IS NOT NULL ORDER BY gene_name")
+    res = con.execute("SELECT DISTINCT gene_name FROM transcripts WHERE gene_name IS NOT NULL ORDER BY gene_name")
     # gene_names = [item[0]+" "+item[1]+":"+str(item[2])+"-"+str(item[3]) for item in res.fetchall()]
     gene_names = [item[0] for item in res.fetchall()]
     gene_names = [{"label":i, "value":i} for i in gene_names]
 
     print("----load samples----")
     samples = set()
-    res = cur.execute("SELECT name FROM samples")
+    res = con.execute("SELECT name FROM samples")
     samples = list(set([item[0] for item in res.fetchall()]))
 
     print("----load tissues----")
     tissues  = set()
-    res = cur.execute("SELECT DISTINCT tissue FROM samples")
+    res = con.execute("SELECT DISTINCT tissue FROM samples")
     tissues = list(set([item[0] for item in res.fetchall()]))
 
     # tissues sort by given order in list was given by Torsten Schoenberg
@@ -104,23 +121,7 @@ def fill_dropdowns_in_dash_application():
     tissues_and_samples = tissues + samples
     tissues_and_samples = [{"label":i, "value":i} for i in tissues_and_samples]
     tissues = [{"label":i, "value":i} for i in tissues]
-    con.close()
     return gene_names, tissues_and_samples, tissues
-
-def create_connection():
-    """
-    create a database connection to the SQLite database
-    named stringte_2.db
-
-    Returns:
-        con: Connection object or None
-    """    """"""
-    con = None
-    try:
-        con = sqlite3.connect(database_file)
-    except OSError as e:
-        print(e)
-    return con
 
 def b64_image(image):
     """encodes image for embedding in website
@@ -184,9 +185,6 @@ def get_start_and_end_genomic_region(transcripts):
         end_genomic_region (int): start and end coordinate of genomic region
         y (int): y coordinate for svg how much space is needed for transcript names
     """
-    #open database connection
-    con = create_connection()
-    cur = con.cursor()
 
     #initialize start and end of genomic region
     start_genomic_region = float("inf")
@@ -196,7 +194,7 @@ def get_start_and_end_genomic_region(transcripts):
     for transcript in transcripts:
         y += 20
         statement = "SELECT e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-        res = cur.execute(statement, (transcript,))
+        res = con.execute(statement, (transcript,))
         exons = res.fetchall()
         if (exons[0][0]) < start_genomic_region:
             start_genomic_region = exons[0][0]
@@ -214,13 +212,10 @@ def get_exons_from_transcript_id(transcript_id):
         exons (list): list of tuples with start, end, chrom, strand
     """    """
     """
-    #open database connection
-    con = create_connection()
-    cur = con.cursor()
 
     #database statement
     statement = "SELECT e.start, e.end, e.chrom, e.strand from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-    res = cur.execute(statement, (transcript_id,))
+    res = con.execute(statement, (transcript_id,))
     exons = res.fetchall()
     return exons
 
@@ -273,16 +268,11 @@ def find_domains_from_database(longest_transcript):
 
     #get domains from database
     statement = "SELECT d.domain, d.start, d.end FROM domains as d, transcripts as t WHERE t.id=d.transcript AND t.transcript_id=?"
-    con = create_connection()
-    cur = con.cursor()
-    res = cur.execute(statement,(longest_transcript,))
+    res = con.execute(statement,(longest_transcript,))
     df = pd.DataFrame(res.fetchall())
-    if df.empty:
-        con.close()
-    else:
+    if not df.empty:
         columns = ["domain","start","end"]
         df.columns = columns
-        con.close()
 
     #for each entry in df append longest_transcript, domain, start, end to domains
     domains = []
@@ -412,11 +402,9 @@ def generate_svg(transcripts, position_mut=None):
     gene_names = {}
     for transcript_id in transcripts:
         #connect to database
-        con = create_connection()
-        cur = con.cursor()
         #get gene_name and smallest start and biggest end position of transcript
         statement = "SELECT t.gene_name, min(e.start), max(e.end) FROM transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-        res = cur.execute(statement, (transcript_id,))
+        res = con.execute(statement, (transcript_id,))
         gene_name, start, end = res.fetchone()
         #add gene_name to dictionary and update start if smaller and end if bigger than before
         if gene_name in gene_names:
@@ -426,7 +414,6 @@ def generate_svg(transcripts, position_mut=None):
                 gene_names[gene_name][1] = end
         else:
             gene_names[gene_name] = [start, end]
-        con.close()
 
     formatted_entries = []
     for gene_name, values in sorted(gene_names.items()):
@@ -585,7 +572,6 @@ def find_longest_ORF(transcript):
     Returns:
         (int, int, int, int): start_pos on plus, end_pos on plus, start_on_genome, end_on_genome
     """    """"""
-    con = create_connection()
 
     s, e, gs, ge = con.execute( """select sum( min(e.end,t.cds_start,t.cds_end) - min(e.start,t.cds_start,t.cds_end) ),
                                             sum( min(e.end,max(t.cds_start,t.cds_end)) - min(e.start,max(t.cds_start,t.cds_end)) ) - 1,
@@ -593,7 +579,7 @@ def find_longest_ORF(transcript):
                                     from transcripts t, exons e
                                     where t.transcript_id=? and e.transcript=t.id""",
                         (transcript,) ).fetchone() ;
-    con.close()
+
     if s==None or e==None or gs==None or ge==None:
         return (None,None,None,None) #no ORF Found
     else:
@@ -613,7 +599,6 @@ def get_cDNA(transcripts):
     cDNAs = {}
     revcom = str.maketrans("ACGT","TGCA")
     genome = twobitreader.TwoBitFile(genome_file)
-    con = create_connection()
 
     for current_transcript in transcripts:
         statement_get_exon_structure = "SELECT e.chrom, e.strand, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==? ORDER BY e.sequence_number"
@@ -628,7 +613,6 @@ def get_cDNA(transcripts):
         cur.close()
         cDNAs[current_transcript] = ''.join(cur_seq)
 
-    con.close()
     return cDNAs
 
 
@@ -679,10 +663,8 @@ def get_proteins_by_gene(gene_name):
     statement_get_all_transcripts = "SELECT transcript_id FROM transcripts WHERE gene_name=?"
     if gene_name is None:
         raise exceptions.PreventUpdate
-    con = create_connection()
     res = con.execute(statement_get_all_transcripts, [gene_name])
     tids = res.fetchall()
-    con.close()
 
     if tids:
         return get_proteins([t for (t,) in tids])
@@ -707,11 +689,8 @@ def get_mRNA_from_gene_name(gene_name):
     statement_get_all_transcripts = "SELECT transcript_id FROM transcripts WHERE gene_name=?"
     if gene_name is None:
         raise exceptions.PreventUpdate
-    con = create_connection()
-    cur = con.cursor()
-    res = cur.execute(statement_get_all_transcripts, [gene_name])
+    res = con.execute(statement_get_all_transcripts, [gene_name])
     tids = res.fetchall()
-    con.close()
     if tids:
         return get_cDNA([t for (t,) in tids])
     else:
@@ -730,18 +709,15 @@ def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
     Returns:
         (DataFrame): DataFrame with all transcripts from gennomics position
     """
-    con = create_connection()
-    cur = con.cursor()
     if strand:
         statement = "SELECT t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
-        res = cur.execute(statement,(start,stop,chrom,strand))
+        res = con.execute(statement,(start,stop,chrom,strand))
     else:
         statement = "SELECT t.gene_name, t.transcript_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
-        res = cur.execute(statement,(start,stop,chrom))
+        res = con.execute(statement,(start,stop,chrom))
 
     df = pd.DataFrame(res.fetchall())
     df.columns = ["gene_name","transcript_id"]
-    con.close()
     return df
 
 def get_TPM_from_tissues(gene_name, tissues):
@@ -755,9 +731,7 @@ def get_TPM_from_tissues(gene_name, tissues):
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript
     """
     print("--Get TPMs for all tissues--")
-    con = create_connection()
     con.create_aggregate("stdev", 1, StdevFunc)
-    cur = con.cursor()
     print("tissues")
     #print current time
     print("Calculate TPMs for each tissue" ,datetime.datetime.now())
@@ -767,7 +741,7 @@ def get_TPM_from_tissues(gene_name, tissues):
     i = 0
     for tissue in tissues:
         statement = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
-        res = cur.execute(statement, (tissue, gene_name))
+        res = con.execute(statement, (tissue, gene_name))
         df_A = pd.DataFrame(res.fetchall())
         df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
 
@@ -792,7 +766,6 @@ def get_TPM_from_tissues(gene_name, tissues):
     df_result = df_result.sort_values(by=["transcript_id"])
 
     # now get the length, number of exons, start and stop of each transcript
-    con = create_connection()
 
     length_transcript = []
     start = []
@@ -828,7 +801,6 @@ def get_TPM_from_tissues(gene_name, tissues):
     df_result.insert(5, "start", start)
     df_result.insert(6, "end", end)
     df_result.insert(7, "# of exons", number_exons)
-    con.close()
 
     return df_result
 
@@ -843,9 +815,7 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript
     """
     print("--Get TPMs for all tissues--")
-    con = create_connection()
     con.create_aggregate("stdev", 1, StdevFunc)
-    cur = con.cursor()
     print("tissues")
     #print current time
     print("Calculate TPMs for each tissue" ,datetime.datetime.now())
@@ -860,7 +830,7 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
             WHERE t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
             AND s.tissue = ? \
             GROUP BY t.gene_name, t.transcript_id;"
-        res = cur.execute(statement, [ t for t in transcripts ] + [tissue])
+        res = con.execute(statement, [ t for t in transcripts ] + [tissue])
         df_A = pd.DataFrame(res.fetchall())
         df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
 
@@ -885,8 +855,6 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     df_result = df_result.sort_values(by=["transcript_id"])
 
     # now get the length, number of exons, start and stop of each transcript
-    con = create_connection()
-
     length_transcript = []
     start = []
     end = []
@@ -914,7 +882,6 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     df_result.insert(4, "start", start)
     df_result.insert(5, "end", end)
     df_result.insert(6, "# of exons", number_exons)
-    con.close()
 
     return df_result
 
@@ -929,10 +896,6 @@ def get_group_comparisons_from_gene(gene_name, groupA, groupB):
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript for groupA and groupB
     """
-    con = create_connection()
-    con.create_aggregate("stdev", 1, StdevFunc)
-    cur = con.cursor()
-
     if (groupA[0]).startswith("SRR") and (groupB[0]).startswith("SRR") :
         print("SRAs")
         print("Calculate TPMs over groups" ,datetime.datetime.now())
@@ -946,13 +909,13 @@ def get_group_comparisons_from_gene(gene_name, groupA, groupB):
         statement_B = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
 
     groupA.append(gene_name)
-    res = cur.execute(statement_A, (groupA))
+    res = con.execute(statement_A, (groupA))
     print("group: ",groupA ,datetime.datetime.now())
     df_A = pd.DataFrame(res.fetchall())
     df_A.columns = ["gene_name","transcript_id","TPM(mean)A", "TPM(sd)A"]
 
     groupB.append(gene_name)
-    res = cur.execute(statement_B, (groupB))
+    res = con.execute(statement_B, (groupB))
     print("group: ",groupB ,datetime.datetime.now())
     df_B = pd.DataFrame(res.fetchall())
     df_B.columns = ["gene_name","transcript_id","TPM(mean)B", "TPM(sd)B"]
@@ -971,10 +934,6 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript for groupA and groupB
     """
-    con = create_connection()
-    con.create_aggregate("stdev", 1, StdevFunc)
-    cur = con.cursor()
-
     if (groupA[0]).startswith("SRR") and (groupB[0]).startswith("SRR") :
         print("SRAs")
         print("Calculate TPMs over groups" ,datetime.datetime.now())
@@ -1047,12 +1006,12 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
                 AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
             GROUP BY t.gene_name, t.transcript_id;"
 
-    res = cur.execute(statement_A, groupA + transcripts)
+    res = con.execute(statement_A, groupA + transcripts)
     print("group: ", groupA ,datetime.datetime.now())
     df_A = pd.DataFrame(res.fetchall())
     df_A.columns = ["gene_name","transcript_id","TPM(mean)A", "TPM(sd)A"]
 
-    res = cur.execute(statement_B, groupB + transcripts)
+    res = con.execute(statement_B, groupB + transcripts)
     print("group: ",groupB ,datetime.datetime.now())
     df_B = pd.DataFrame(res.fetchall())
     df_B.columns = ["gene_name","transcript_id","TPM(mean)B", "TPM(sd)B"]
@@ -1068,9 +1027,6 @@ def calculate_percentage_for_TPM(df_result):
     Returns:
         (DataFrame): DataFrame extended for percentage of TPMs
     """
-    con = create_connection()
-    cur = con.cursor()
-
     length_transcript = []
     start = []
     end = []
@@ -1078,8 +1034,7 @@ def calculate_percentage_for_TPM(df_result):
     for transcript in df_result["transcript_id"]: #for each transcript get length, number of exons, start, stop
         #reused code from get exon structure callback to get exon structure information about transcripts
         statement_get_exon_structure = "SELECT e.sequence_number, e.start, e.end from transcripts as t, exons as e WHERE e.transcript==t.id and t.transcript_id==?"
-        cur = con.cursor()
-        res = cur.execute(statement_get_exon_structure, (transcript,))
+        res = con.execute(statement_get_exon_structure, (transcript,))
         df = pd.DataFrame(res.fetchall())
         columns = ["exon number", "start", "end"]
         df.columns = columns
@@ -1110,7 +1065,6 @@ def calculate_percentage_for_TPM(df_result):
     df_result = df_result.round({'TPM(mean)A': 3, 'TPM(%)A':1,'TPM(mean)B': 3, 'TPM(%)B':1, 'TPM(sd)A':3, 'TPM(sd)B':3})
     # sort columns of df_result by 'TPM(mean)A', 'TPM(%)A', 'TPM(mean)B', 'TPM(%)B'
     df_result = df_result.reindex(['gene_name','transcript_id','length (bp)','start','end','# of exons','TPM(mean)A','TPM(sd)A','TPM(%)A', 'TPM(mean)B','TPM(sd)B','TPM(%)B'], axis=1)
-    con.close()
     return (df_result)
 
 def calculate_inner_exons(gene_name):
@@ -1123,12 +1077,9 @@ def calculate_inner_exons(gene_name):
     Args:
         gene_name (string): name of gene
     """
-    con = create_connection()
-    cur = con.cursor()
 
     statement = "SELECT t.transcript_id, e.sequence_number, e.start, e.end FROM exons as e, transcripts as t WHERE e.transcript == t.id AND t.gene_name = ?"
-    cur.execute(statement, (gene_name,))
-    rows = cur.fetchall()
+    rows = con.execute(statement, (gene_name,))
     df = pd.DataFrame(rows, columns=['transcript_id','sequence_number', 'start', 'end'])
     #generate for each new transcript_id in df a new dataframe
     result_df = []
@@ -1868,13 +1819,11 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
     """
     print("----download table TPMs without means----")
     df = pd.DataFrame() #dataframe for each group TPMs for each sample
-    con = create_connection()
 
     statement = "SELECT DISTINCT transcript_id FROM transcripts WHERE gene_name=?"
     transcript_ids = [t for (t,) in con.execute(statement, [input_value])]
     if not transcript_ids:
         print("no Update")
-        con.close()
         raise exceptions.PreventUpdate
 
     df_final = []
@@ -2104,7 +2053,6 @@ def downloadDomains(n_clicks,value):
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     else:
-        con = create_connection()
         res = con.execute( """select t.transcript_id, d.domain, d.start, d.end,
                                      (select sum(min(e.end,t.cds_start) - min(e.start,t.cds_start))
                                       from exons e where e.transcript=t.id),
@@ -2130,7 +2078,6 @@ def downloadDomains(n_clicks,value):
 
             tsv += "%s\t%s\t%d\t%d\n" % (tid, dom, eff_start/3, eff_end/3)
 
-        con.close()
         return dict(content=tsv,filename="domains_"+value+".tsv")
 
 @app.callback(
@@ -2155,11 +2102,8 @@ def get_transcripts_from_gene(input_value):
     if input_value is None:
         raise exceptions.PreventUpdate
     print("----Get transcripts from gene_name----")
-    con = create_connection()
-    cur = con.cursor()
-    res = cur.execute(statement_get_all_transcripts, [input_value])
+    res = con.execute(statement_get_all_transcripts, [input_value])
     df = pd.DataFrame(res.fetchall())
-    con.close()
     if df.empty:
         return (no_update, no_update, "Not available")
     else:
@@ -2192,19 +2136,15 @@ def get_exon_infomration_from_transcript_id(input_value):
         raise exceptions.PreventUpdate
     print("----Get exon structure from transcript_id----")
 
-    con = create_connection()
-    cur = con.cursor()
-    res = cur.execute(statement_get_exon_structure, [input_value])
+    res = con.execute(statement_get_exon_structure, [input_value])
     df = pd.DataFrame(res.fetchall())
     if df.empty:
-        con.close()
         return (no_update, no_update, "Not available")
     else:
         columns = ["exon number", "chromosom", "start", "end", "strand"]
         df.columns = columns
         columns = [{"name": i, "id": i} for i in df.columns]
         data = df.to_dict('records')
-        con.close()
         return (data, columns, '')
 
 #### search by exon chr:start:end
@@ -2238,19 +2178,15 @@ def updateExonSearch(n_clicks, chro, start, stop, strand):
     if n_clicks is not None:
         if n_clicks>0:
             print("----Search for transcripts in genomic region----")
-            con = create_connection()
-            cur = con.cursor()
-            res = cur.execute(statement,(start,stop,stop, chro,strand))
+            res = con.execute(statement,(start,stop,stop, chro,strand))
             df = pd.DataFrame(res.fetchall())
             if df.empty:
-                con.close()
                 return (no_update, no_update, "Not available")
             else:
                 columns = ["gene_name","transcript_id"]
                 df.columns = columns
                 columns = [{"name": i, "id":i } for i in df.columns]
                 data = df.to_dict('records')
-                con.close()
                 return (data, columns, '')
         else:
             return (no_update, no_update, '')
@@ -2282,7 +2218,6 @@ def run_sql_statement(n_clicks, value):
         if any(x in value.lower() for x in list):
             return (no_update, no_update, "SQL statement not valid: drop/delete or update/insert not allowed")
 
-        con = create_connection()
         cur = con.cursor()
         #try execute sql statement else return error
         try:
@@ -2293,14 +2228,14 @@ def run_sql_statement(n_clicks, value):
         df = pd.DataFrame(res.fetchall())
         if df.empty:
             #return empty data table
-            con.close()
+            cur.close()
             return  ([], [], "No data found")
         else:
             print(cur.description)
             df.columns = [i[0] for i in cur.description]
             columns = [{"name": i, "id": i} for i in df.columns]
             data = df.to_dict('records')
-            con.close()
+            cur.close()
             return (data, columns, "")
 
 
@@ -2363,7 +2298,6 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
         data, columns, svg, warning, start, stop, chrom, strand, mutation, heatmap_relatives, heatmap_absolutes
     """
     # either dropdown or start, stop, chrom als input
-    con = create_connection()
     triggered_id = ctx.triggered_id #check if update-button or search-button is triggered
 
     if triggered_id == 'transcript-button': #if search-search button is triggered
@@ -2378,7 +2312,6 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
             #generate heatmap with all tissues and transcripts
             heatmap_rel = generate_heatmap(result_df, True)
             heatmap_abs = generate_heatmap(result_df, False)
-            con.close()
             print("Average TPM calcuated")
             start, stop, chrom, strand, drawing = generate_svg(result_df["transcript_id"], mutation)
 
@@ -2392,17 +2325,15 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
             if ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None) or ((groupA or groupB) == "") or ((groupA or groupB) == "[]") or ((groupA or groupB) == "None"):
                 print("--no groups selected--")
                 # input_value = input_value.split(" ")[0]
-                cur = con.cursor()
                 #get all transcripts with gene id and gene name over ref gene id
                 statement_get_all_transcripts_from_gene = "SELECT DISTINCT gene_name, transcript_id FROM transcripts WHERE gene_name=? ORDER BY transcript_id"
-                res = cur.execute(statement_get_all_transcripts_from_gene, [input_value])
+                res = con.execute(statement_get_all_transcripts_from_gene, [input_value])
                 df = pd.DataFrame(res.fetchall())
                 transcripts = df[1]
                 df.columns = ["gene_name","transcript_id"]
                 #sort df by transcript_id
                 columns, data = transform_to_columns_and_data(df, False)
 
-                con.close()
                 start, stop, chrom, strand, drawing = generate_svg(transcripts,mutation)
 
 
@@ -2431,7 +2362,6 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
 
                 columns, data = transform_to_columns_and_data(df_result)
 
-                con.close()
                 print("Average TPM calcuated")
                 start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
                 return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, None, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
@@ -2456,7 +2386,6 @@ def get_transcripts_from_gene(transcript_button_clicks, update_button_clicks, in
 
             columns, data = transform_to_columns_and_data(df_result)
 
-            con.close()
             print("Average TPM calcuated")
             start, stop, chrom, _strand, drawing = generate_svg(df_result["transcript_id"],mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
