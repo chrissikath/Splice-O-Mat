@@ -33,32 +33,6 @@ from matplotlib.lines import Line2D
 from config import *
 
 
-#################### 1.0 Helper Functions ############################
-####### helper functions #######
-class StdevFunc:
-    """
-    Aggregtor function for SQLite to calculate the standard deviation
-    https://stackoverflow.com/questions/2298339/standard-deviation-for-sqlite
-    """
-    def __init__(self):
-        self.M = 0.0
-        self.S = 0.0
-        self.k = 1
-
-    def step(self, value):
-        if value is None:
-            return
-        tM = self.M
-        self.M += (value - tM) / self.k
-        self.S += (value - tM) * (value - self.M)
-        self.k += 1
-
-    def finalize(self):
-        if self.k < 3:
-            return None
-        return math.sqrt(self.S / (self.k-2))
-
-
 # create a database connection to the SQLite database
 
 # sqlite3 reports thread safety level "multithreaded", which means
@@ -67,13 +41,16 @@ class StdevFunc:
 # them and they can only cause spurious locking issues.
 #
 # Using a global database object means we can extend and configure it
-# once, e.g. by defining functions or loading extensions.
+# once, e.g. by defining functions or loading extensions.  Our extension
+# implements access to compact storage of bulk data, and the stdev
+# aggregate function.
 
 con = sqlite3.connect(database_file,check_same_thread=False,isolation_level=None)
-# con.enable_load_extension(True)
-# con.load_extension("./mod_array")
-# con.enable_load_extension(False)            # to prevent arbitrary SQL from loading more extensions
-con.create_aggregate("stdev", 1, StdevFunc)
+con.enable_load_extension(True)
+con.load_extension("./mod_array")
+con.enable_load_extension(False)                # to prevent arbitrary SQL from loading more extensions
+r = con.execute("select attachArray(?)", (array_file,))
+print(r.fetchone()[0])                          # prints "Attached..." if successful
 
 
 
@@ -731,7 +708,6 @@ def get_TPM_from_tissues(gene_name, tissues):
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript
     """
     print("--Get TPMs for all tissues--")
-    con.create_aggregate("stdev", 1, StdevFunc)
     print("tissues")
     #print current time
     print("Calculate TPMs for each tissue" ,datetime.datetime.now())
@@ -740,7 +716,11 @@ def get_TPM_from_tissues(gene_name, tissues):
     df_result = pd.DataFrame()
     i = 0
     for tissue in tissues:
-        statement = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) as tpm FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue == ?  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+        statement = """SELECT t.gene_name, t.transcript_id,
+                              AVG(getTpm(s.expresses_off,s.expresses_num,t.id)),
+                              stdev(getTpm(s.expresses_off,s.expresses_num,t.id)) as tpm
+                       FROM samples AS s, transcripts AS t
+                       WHERE s.tissue=? AND t.gene_name=? GROUP BY t.transcript_id"""
         res = con.execute(statement, (tissue, gene_name))
         df_A = pd.DataFrame(res.fetchall())
         df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
@@ -815,7 +795,6 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript
     """
     print("--Get TPMs for all tissues--")
-    con.create_aggregate("stdev", 1, StdevFunc)
     print("tissues")
     #print current time
     print("Calculate TPMs for each tissue" ,datetime.datetime.now())
@@ -823,13 +802,13 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
     i = 0
     for tissue in tissues:
         print(tissue)
-        statement = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
-            AS stdev_tpm FROM transcripts AS t \
-            JOIN expresses AS e ON t.id = e.transcript \
-            JOIN samples AS s ON e.sample = s.id \
-            WHERE t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            AND s.tissue = ? \
-            GROUP BY t.gene_name, t.transcript_id;"
+        statement = """SELECT t.gene_name, t.transcript_id,
+                              AVG(getTpm(s.expresses_off, s.expresses_num, t.id)) AS avg_tpm,
+                              STDEV(getTpm(s.expresses_off, s.expresses_num, t.id)) AS stdev_tpm
+                       FROM transcripts t, samples s
+                       WHERE t.transcript_id IN (%s) AND s.tissue=?
+                       GROUP BY t.gene_name, t.transcript_id""" % ",".join(["?"] * len(transcripts))
+        print(statement)
         res = con.execute(statement, [ t for t in transcripts ] + [tissue])
         df_A = pd.DataFrame(res.fetchall())
         df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
@@ -896,17 +875,25 @@ def get_group_comparisons_from_gene(gene_name, groupA, groupB):
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript for groupA and groupB
     """
+
+    statement = """SELECT t.gene_name, t.transcript_id,
+                            AVG(getTpm(s.expresses_off, s.expresses_num, t.id)),
+                            STDEV(getTpm(s.expresses_off, s.expresses_num, t.id))
+                    FROM samples AS s, transcripts AS t
+                    WHERE s.%s IN (%s) AND t.gene_name=?
+                    GROUP BY t.transcript_id"""
+
     if (groupA[0]).startswith("SRR") and (groupB[0]).startswith("SRR") :
         print("SRAs")
         print("Calculate TPMs over groups" ,datetime.datetime.now())
-        statement_A = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.name IN (" + ",".join(["?"] * len(groupA)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
-        statement_B = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.name IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+        statement_A = statement % ("name", ",".join(["?"] * len(groupA)))
+        statement_B = statement % ("name", ",".join(["?"] * len(groupB)))
     else:
         print("tissues")
         #print current time
         print("Calculate TPMs over groups" ,datetime.datetime.now())
-        statement_A = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupA)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
-        statement_B = "SELECT t.gene_name, t.transcript_id, AVG(e.tpm), stdev(e.tpm) FROM expresses AS e, samples AS s, transcripts AS t WHERE e.sample=s.id AND s.tissue IN (" + ",".join(["?"] * len(groupB)) + ")  AND e.transcript=t.id AND t.gene_name=? GROUP BY t.transcript_id"
+        statement_A = statement % ("tissue", ",".join(["?"] * len(groupA)))
+        statement_B = statement % ("tissue", ",".join(["?"] * len(groupB)))
 
     groupA.append(gene_name)
     res = con.execute(statement_A, (groupA))
@@ -934,6 +921,15 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
     Returns:
         (DataFrame): DataFrame with TPMs, mean and standard deviation for each transcript for groupA and groupB
     """
+
+    statement = """SELECT t.gene_name, t.transcript_id,
+                            AVG(getTpm(s.expresses_off,s.expresses_num,t.id)) AS avg_tpm,
+                            STDEV(getTpm(s.expresses_off,s.expresses_num,t.id)) AS stdev_tpm
+                    FROM transcripts AS t, samples AS s
+                    WHERE s.%s IN (%s) AND t.transcript_id IN (%s)
+                    GROUP BY t.gene_name, t.transcript_id"""
+
+    # XX this is b0rk3n, isn't it?
     if (groupA[0]).startswith("SRR") and (groupB[0]).startswith("SRR") :
         print("SRAs")
         print("Calculate TPMs over groups" ,datetime.datetime.now())
@@ -948,29 +944,9 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
             groupB[i] = groupB[i].replace("['","")
             groupB[i] = groupB[i].replace("']","")
 
-        statement_A = "\
-            SELECT \
-                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
-            AS \
-                stdev_tpm FROM transcripts AS t \
-            JOIN expresses AS e ON t.id = e.transcript \
-            JOIN samples AS s ON e.sample = s.id \
-            WHERE \
-                s.name IN (" + ",".join(["?"] * len(groupA)) + ") \
-                AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_name, t.transcript_id;"
-        statement_B = "\
-            SELECT \
-                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
-            AS \
-                stdev_tpm FROM transcripts AS t \
-            JOIN expresses AS e ON t.id = e.transcript \
-            JOIN samples AS s ON e.sample = s.id \
-            WHERE \
-                s.name IN (" + ",".join(["?"] * len(groupB)) + ") \
-                AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_name, t.transcript_id;"
-
+        #  XXX  This code is untested, because I couldn't reach it.
+        statement_A = statement % ("name", ",".join(["?"] * len(groupA)), ",".join(["?"] * len(transcripts)))
+        statement_B = statement % ("name", ",".join(["?"] * len(groupB)), ",".join(["?"] * len(transcripts)))
     else:
         print("tissues")
         #print current time
@@ -985,26 +961,9 @@ def get_group_comparisons_over_transcripts(transcripts, groupA, groupB):
         for i in range(len(groupB)):
             groupB[i] = groupB[i].replace("['","")
             groupB[i] = groupB[i].replace("']","")
-        statement_A = "SELECT \
-                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
-            AS \
-                stdev_tpm FROM transcripts AS t \
-            JOIN expresses AS e ON t.id = e.transcript \
-            JOIN samples AS s ON e.sample = s.id \
-            WHERE \
-                s.tissue IN (" + ",".join(["?"] * len(groupA)) + ") \
-                AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_name, t.transcript_id;"
-        statement_B = "SELECT \
-                t.gene_name, t.transcript_id, AVG(e.tpm) AS avg_tpm, STDEV(e.tpm)\
-            AS \
-                stdev_tpm FROM transcripts AS t \
-            JOIN expresses AS e ON t.id = e.transcript \
-            JOIN samples AS s ON e.sample = s.id \
-            WHERE \
-                s.tissue IN (" + ",".join(["?"] * len(groupB)) + ") \
-                AND t.transcript_id IN (" + ",".join(["?"] * len(transcripts)) + ") \
-            GROUP BY t.gene_name, t.transcript_id;"
+
+        statement_A = statement % ("tissue", ",".join(["?"] * len(groupA)), ",".join(["?"] * len(transcripts)))
+        statement_B = statement % ("tissue", ",".join(["?"] * len(groupB)), ",".join(["?"] * len(transcripts)))
 
     res = con.execute(statement_A, groupA + transcripts)
     print("group: ", groupA ,datetime.datetime.now())
@@ -1833,7 +1792,8 @@ def download_table_TPMS_without_means(n_clicks, all_tissues, input_value):
         df_tissue = pd.DataFrame(columns=columns_list)
         #get value at key "label" from dictionary
         for transcript in transcript_ids:
-            statement = "select s.tissue, s.name, e.tpm from expresses as e, samples as s, transcripts as t WHERE e.sample = s.id AND s.tissue==? AND e.transcript==t.id AND t.transcript_id==?;"
+            statement = "SELECT s.tissue, s.name, getTpm(s.expresses_off, s.expresses_num, t.id) \
+                         FROM samples as s, transcripts as t WHERE s.tissue=? AND t.transcript_id=?"
             res = con.execute(statement, (tissue['value'], transcript))
             df_result = pd.DataFrame(res.fetchall())
             df_result.columns= ['tissue', 'sample', 'TPM']

@@ -50,3 +50,24 @@ unexpected from a user perspective.
 Commonalities should be factored out, redundancies removed, and
 similarity be enforced through code reuse.
 
+
+## get\_group\_comparisons\_over\_transcripts looks fishy
+
+The code doesn't seem to know whether `groupA` and `groupB` are supposed
+to be lists or strings containing an encoded list.  It first treats it
+as a list, then tries to split the string into a list.  This can't be
+right, and the splitting code is awful, too.
+
+
+## duplicated and unclean logic
+
+It is possible to select samples or tissues for grouping, or even a mix
+of the two.  Multiple code paths then switch on whether the first
+selected item is a sample and then run queries that match on either
+`samples.tissue` or `samples.name`.  Mixed groups are never handled
+correctly.
+
+A clean way out could be to always treat the groups as mixed and match
+samples on either name or tissue.  That should shorten the code and make
+it easier to keep consistent.
+
