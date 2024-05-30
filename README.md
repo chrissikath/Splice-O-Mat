@@ -171,7 +171,7 @@ Do you have any questions, suggestions about the webtool or the analysis please 
 
 ---
 ## ToDos:
-- [ ] 'gene_name' benutzt anstatt 'gene_id' benutzen
+- [X] 'gene_name' benutzt anstatt 'gene_id' benutzen
 - [X] mitochondriale Gene löschen
 - [ ] Reinzoomen
 - [ ] alle Domänen anzeigen
@@ -182,6 +182,6 @@ Do you have any questions, suggestions about the webtool or the analysis please 
 - [ ]  Mutation labeln können (rs Code)
 - [ ] Eigene Daten einspeißen (pipeline, datenbank etc)
   - müssen deep sequenced sein, paired-end, datenbank local speichern?
-- [ ] gene_id entfernen, stattdessen gene_name
+- [X] gene_id entfernen, stattdessen gene_name
 
 [Back to the top](#top)
