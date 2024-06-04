@@ -635,7 +635,38 @@ def get_cDNA(transcripts):
     return cDNAs
 
 
-def get_proteins(ref_gene_id):
+def get_proteins(transcript_ids):
+    """ Get proteins for a list of of transcripts
+
+    Args:
+        transcript_ids (list-ish): transcript ids
+
+    Returns:
+        (dict): maps transcript_ids to their protein sequences
+    """
+    cDNA_dict = get_cDNA(transcript_ids)
+
+    proteins = {}
+    for transcript in cDNA_dict:
+        # print("transcript: %s" % transcript)
+        cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
+        # print("cDNA_string: %s" % cDNA_Seq)
+        start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
+        if start_pos is None or end_pos is None:
+            print("No ORF found")
+            proteins[transcript]="No ORF found"
+            continue
+        # print("--ORF from %d to %d--" % (start_genome, end_genome))
+        if start_genome<=end_genome:
+            proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
+        else:
+            s = len(cDNA_Seq) - (end_pos+1)
+            e = len(cDNA_Seq) - start_pos
+            proteins[transcript] = cDNA_Seq[s:e].translate()
+    return proteins
+
+
+def get_proteins_by_gene(ref_gene_id):
     """ Get all proteins from all transcripts corresponding to ref_gene_id
     # TODO - ? change ref_gene_id to gene_name ? 
 
@@ -648,8 +679,7 @@ def get_proteins(ref_gene_id):
     Returns:
         (dict): maps transcript_ids to their protein sequences
     """
-    print("---- get_proteins from all transcript corresponding from gene_id ----")
-    proteins = {}
+    print("---- get_proteins_by_gene from all transcript corresponding from gene_id ----")
     statement_get_all_transcripts = "SELECT DISTINCT t2.gene_id, t2.transcript_id FROM transcripts as t, transcripts as t2 WHERE t.gene_id=t2.gene_id AND t.ref_gene_id=? ORDER BY t2.gene_name, t2.transcript_id"
     # statement_get_all_transcripts = "SELECT gene_id,transcript_id FROM transcripts WHERE gene_name=?"    
     if ref_gene_id is None:
@@ -663,25 +693,7 @@ def get_proteins(ref_gene_id):
         return (no_update, no_update, "Not available")
     else:
         df.columns = ["gene_id","transcript_id"]
-        cDNA_dict = get_cDNA(df["transcript_id"])
-        
-        for transcript in cDNA_dict:
-            # print("transcript: %s" % transcript)
-            cDNA_Seq = Seq(cDNA_dict.get(transcript)) #get cDNA of transcript
-            # print("cDNA_string: %s" % cDNA_Seq)
-            start_pos, end_pos, start_genome, end_genome = find_longest_ORF(transcript)
-            if start_pos is None or end_pos is None:
-                print("No ORF found")
-                proteins[transcript]="No ORF found"
-                continue
-            # print("--ORF from %d to %d--" % (start_genome, end_genome))
-            if start_genome<=end_genome:
-                proteins[transcript] = cDNA_Seq[start_pos:end_pos+1].translate()
-            else:
-                s = len(cDNA_Seq) - (end_pos+1)
-                e = len(cDNA_Seq) - start_pos
-                proteins[transcript] = cDNA_Seq[s:e].translate()
-        return proteins
+        return get_proteins(df["transcript_id"])
 
 
 def get_mRNA_from_gene_id(ref_gene_id):
@@ -732,10 +744,15 @@ def get_transcripts_by_gennomics_pos(chrom, start, stop, strand):
     Returns:
         (DataFrame): DataFrame with all transcripts from gennomics position
     """    
-    statement = "SELECT DISTINCT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts as t, exons as e WHERE t.id=e.transcript AND e.start>=? AND e.end<=? AND e.start<=? AND e.chrom=? AND e.strand=?"
     con = create_connection()
     cur = con.cursor()
-    res = cur.execute(statement,(start,stop,stop,chrom,strand))
+    if strand:
+        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=? and e.strand=?)"
+        res = cur.execute(statement,(start,stop,chrom,strand))
+    else:
+        statement = "SELECT t.gene_id, t.gene_name, t.transcript_id, t.ref_gene_id FROM transcripts t where t.id in (select e.transcript from exons e where e.end>=? and e.start<=? and e.chrom=?)"
+        res = cur.execute(statement,(start,stop,chrom))
+
     df = pd.DataFrame(res.fetchall())
     if df.empty:
         con.close()
@@ -820,7 +837,7 @@ def get_TPM_from_tissues(gene_id, tissues):
 
     # TODO: check gene RBFOX2 
     print(df_result["gene_name"])
-    predicted_proteins = get_proteins(df_result["gene_name"][0])
+    predicted_proteins = get_proteins(df_result["transcript_id"])
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
     for transcripts_id in predicted_proteins:
@@ -1238,8 +1255,13 @@ card_explanation = dbc.Card([
                     ]),
                 ])
                     
-            ], width=5)
-
+            ], width=5),
+            dbc.Col([
+                html.P([
+                    "If you use Splice-O-Mat for a scientific publication, please cite \"The repertoire and structure of adhesion GPCR transcript variants assembled from publicly available deep-sequenced human samples\", Christina Katharina Kuhn, Udo Stenzel, Sandra Berndt, Ines Liebscher, Torsten Schöneberg, Susanne Horn, Nucleic Acids Research, gkae145, ",
+                    html.A("https://doi.org/10.1093/nar/gkae145", href="https://doi.org/10.1093/nar/gkae145")
+                    ]),
+            ], width=12)
         ]),
     ])
 ])
@@ -2093,7 +2115,7 @@ def downloadProteins(n_clicks,value):
     if (n_clicks is None) or (n_clicks == 0):
         return (no_update)
     if n_clicks is not None and n_clicks>0:
-        proteins = get_proteins(value)
+        proteins = get_proteins_by_gene(value)
         fasta = ''.join([ ">"+key+"\n"+str(proteins[key])+"\n" for key in proteins ])
         return dict(content=fasta,filename="proteins_"+value+".fasta")
     
@@ -2502,7 +2524,7 @@ def get_transcripts_from_ref_gene_id(transcript_button_clicks, update_button_cli
 
             con.close()
             print("Average TPM calcuated")
-            start, stop, chrom, strand, drawing = generate_svg(df_result["transcript_id"],mutation)
+            start, stop, chrom, _strand, drawing = generate_svg(df_result["transcript_id"],mutation)
             return (data, columns, b64_svg(drawing),'', start, stop, chrom, strand, mutation, heatmap_rel, {'display': 'block'}, heatmap_abs, {'display': 'block'})
 
         elif ((groupA or groupB) == "none") or ((groupA or groupB) == []) or ((groupA or groupB) == None):
