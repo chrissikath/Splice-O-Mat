@@ -808,7 +808,6 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
                        FROM transcripts t, samples s
                        WHERE t.transcript_id IN (%s) AND s.tissue=?
                        GROUP BY t.gene_name, t.transcript_id""" % ",".join(["?"] * len(transcripts))
-        print(statement)
         res = con.execute(statement, [ t for t in transcripts ] + [tissue])
         df_A = pd.DataFrame(res.fetchall())
         df_A.columns = ["gene_name","transcript_id","TPM(mean)"+tissue, "TPM(sd)"+tissue]
