@@ -770,18 +770,17 @@ def get_TPM_from_tissues(gene_name, tissues):
         number_exons.append(number_of_exon)
 
     # TODO: check gene RBFOX2
-    print(df_result["gene_name"])
     predicted_proteins = get_proteins(df_result["transcript_id"])
     # for each key in dict get the length of the proteins which is coded as the length of the Seq object
     length_protein = []
     for transcripts_id in predicted_proteins:
         length_protein.append(len(predicted_proteins[transcripts_id]))
-    df_result.insert(3, "length transcript (bp)", length_transcript)
-    df_result.insert(4, "length predicted protein (as)", length_protein)
-    df_result.insert(5, "start", start)
-    df_result.insert(6, "end", end)
-    df_result.insert(7, "# of exons", number_exons)
-
+    df_result.insert(2, "length transcript (bp)", length_transcript)
+    df_result.insert(3, "length predicted protein (as)", length_protein)
+    df_result.insert(4, "start", start)
+    df_result.insert(5, "end", end)
+    df_result.insert(6, "# of exons", number_exons)
+    
     return df_result
 
 def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
@@ -856,10 +855,10 @@ def get_TPM_from_tissues_over_transcripts(transcripts, tissues):
         number_exons.append(number_of_exon)
 
     #insert value at column 1
-    df_result.insert(3, "length (bp)", length_transcript)
-    df_result.insert(4, "start", start)
-    df_result.insert(5, "end", end)
-    df_result.insert(6, "# of exons", number_exons)
+    df_result.insert(2, "length (bp)", length_transcript)
+    df_result.insert(3, "start", start)
+    df_result.insert(4, "end", end)
+    df_result.insert(5, "# of exons", number_exons)
 
     return df_result
 
