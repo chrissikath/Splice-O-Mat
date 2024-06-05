@@ -7,7 +7,9 @@ analysis/GSE*/
 analysis/SRP*/
 analysis/melanoma*/
 analysis/all_domains.tsv
+scripts/config.py
 scripts/spliceomat-env/
+scripts/mod_array.so
 
 # Exclude biological files
 *.fastq
