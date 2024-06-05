@@ -4,7 +4,7 @@ This repository contains all informations and scripts for the paper: <br>
 [![DOI](https://zenodo.org/badge/696187476.svg)](https://zenodo.org/badge/latestdoi/696187476) <br>
 **The repertoire and structure of adhesion GPCR transcripts assembled from deep-sequenced human samples.** <br>
 **Christina Katharina Kuhn, Udo Stenzel, Sandra Berndt, Ines Liebscher, Torsten Schöneberg, Susanne Horn** <br>
-Under Review at Nuclar Acid Research (NAC) <br> 
+published at Nuclar Acid Research (NAC) [ https://doi.org/10.1093/nar/gkae145](https://doi.org/10.1093/nar/gkae145) <br> 
 
 This includes preprocessing of the datasets (`/analysis`), the scripts for the webtool (`/scripts`), and additional analysis for the manuscript (`/analysis`).  <br>
 
