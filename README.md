@@ -167,21 +167,21 @@ version used: interproscan-5.60-92.0 <br>
  (has to be generated with the structure: domains (transcript, domain, start, end))
 
 ## Contact
-Do you have any questions, suggestions about the webtool or the analysis please write me an [email](mailto:christina.kuhn@medizin.uni-leipzig.de)
+Do you have any questions, suggestions about the webtool or the analysis please write me an [email](mailto:christina.kuhn@izi.fraunhofer.de)
 
 ---
 ## ToDos:
 - [X] 'gene_name' benutzt anstatt 'gene_id' benutzen
 - [X] mitochondriale Gene löschen
+- [X] gene_id entfernen, stattdessen gene_name
 - [ ] Reinzoomen
-- [ ] alle Domänen anzeigen
+- [X] alle Domänen anzeigen -> ist implementiert über GetDomains
 - [ ] responsive
 - [ ] an eine SNP Datenbank anknüpfen
 - [ ] Svg flippen
 - [ ] Eigene Domänen eintragen
-- [ ]  Mutation labeln können (rs Code)
+- [ ] Mutation labeln können (rs Code)
 - [ ] Eigene Daten einspeißen (pipeline, datenbank etc)
   - müssen deep sequenced sein, paired-end, datenbank local speichern?
-- [X] gene_id entfernen, stattdessen gene_name
 
 [Back to the top](#top)
